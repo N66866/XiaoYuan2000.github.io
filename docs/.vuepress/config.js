@@ -1,5 +1,4 @@
 module.exports = {
-    base: "/docs/",
     title: "NULL学习笔记",
     description: "分享各类资源、教程、工具等等",
     markdown: {

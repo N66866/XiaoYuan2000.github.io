@@ -27,24 +27,27 @@ module.exports = {
         sidebarDepth: 2,
         search: true,
         searchMaxSuggestions: 10,
+        displayAllHeaders: false,
         sidebar:
             {
                 // docs文件夹下面的java文件夹 文档中md文件 书写的位置(命名随意)
                 '/java/': [
-                    //首页 java 目录下的README.md 等于是首页,必须要 不然404
-                    '/java/',
+                    //首页 java 目录下的README.md 等于是首页,必须要又README.md 不然404
+                    //'/java/',
                     //自定目录
                     {
-                        title: 'Java数据结构基础',
+                        title: 'Java底层',
+                        collapsable: true,
                         children: [
-                            '/java/alg', // 以docs为根目录来查找文件
+                            {title:'HashMap',path:'/java/hashMap'}, // 以docs为根目录来查找文件
+                            {title:'JUC',path:'/java/JUC'}, // 以docs为根目录来查找文件
                             // 上面地址查找的是：docs>java>test.md 文件
                             // 自动加.md 每个子选项的标题 是该md文件中的第一个h1/h2/h3标题
                         ]
                     }
                 ],
                 '/git/': [
-                    '/git/',
+                   // '/git/',
                     {
                         title: 'git',
                         children: [

@@ -51,6 +51,7 @@ jobs:
         with: # 参数配置
           github_token: ${{ secrets.你的密钥名 }}  #在第四步骤说明
           publish_dir: ./docs/.vuepress/dist #将打包后哪个文件/文件夹 推送上分支，会推送到 gh-pages分支
+        #  cname: 你的域名 # 有需要自定义域名的可以去掉该行注释并指定为你自己的域名
 ```
 ---
 4. **github_token: secrets.你的密钥名** 配置，点击新建仓库秘钥，名字随便取，跟前文的'你的密钥名'相同即可，至于里面的SCRECT就填写申请的秘钥，将在下一步讲解（可以先随便填写保存，后面申请秘钥后再修改即可）
@@ -70,4 +71,4 @@ jobs:
 ![pic](/practice/CICD/github-pages-06.png)  
 
  * 使用github域名：将仓库名字改为<自己的用户名>.github.io，就能用<自己的用户名>.github.io直接访问该github pages。
- * 自定义域名，在第七步的配置页里，Custom domain填写自己的域名，然后到自己的域名DNS解析一下到该github pages即可。
+ * 自定义域名，在第七步的配置页里，Custom domain填写自己的域名，然后到自己的域名DNS解析一下到该github pages即可。 注意，要把自动化部署脚本中cname一行去除注释并改为你的自定义域名，否则下一次自动化部署将会覆盖你的手动配置

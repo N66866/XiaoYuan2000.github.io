@@ -90,3 +90,6 @@ private static int calculateSize(int numElements) {
     return initialCapacity;
 }
 ```
+* 在初始化的过程中，它需要找到你当前传输值最小的2的倍数的一个容量。这与HashMap的初始化过程相似。
+
+> 未完待续...

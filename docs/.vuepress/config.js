@@ -13,6 +13,7 @@ module.exports = {
                     {text: "Java", link: "/java/"},
                     {text: "Spring", link: "/spring/"},
                     {text: "git", link: "/git/"},
+                    {text: "技术实践", link: "/practice/"},
                     {text: "待更新", link: "/update"},
                 ]
             }, // 内部链接 以docs为根目录
@@ -53,6 +54,15 @@ module.exports = {
                         title: 'git',
                         children: [
                             '/git/git'
+                        ]
+                    }
+                ],
+                '/practice/': [
+                    // '/git/',
+                    {
+                        title: '技术实践',
+                        children: [
+                            '/practice/CI CD'
                         ]
                     }
                 ]

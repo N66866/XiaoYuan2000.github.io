@@ -32,7 +32,7 @@ Deque<Integer> stack = new ArrayDeque<Integer>();
 ## 双端队列ArrayDeque
 ### 功能使用
 ArrayDeque 是基于数组实现的可动态扩容的双端队列，也就是说你可以在队列的头和尾同时插入和弹出元素。当元素数量超过数组初始化长度时，则需要扩容和迁移数据。
-![pic](/interview-10-04.png)
+![pic](/java/arraydueue/interview-10-04.png)
 * 双端队列是基于数组实现，所以扩容迁移数据操作。
 * push、offerFirst、addFirst，头插方法，效果一致、offerLast、addLast，尾插方法，这样两端都满足后进先出。
 * 整体来看，双端队列，就是一个环形。所以扩容后继续插入元素也满足后进先出。

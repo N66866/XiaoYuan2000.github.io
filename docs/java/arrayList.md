@@ -51,7 +51,7 @@ public boolean add(E e) {
 #### 插入时扩容
 在前面**初始化**部分讲到，ArrayList默认初始化时会申请10个长度的空间，如果超过这个长度则需要进行扩容，那么它是怎么扩容的呢？
 从根本上分析来说，数组是定长的，如果超过原来定长长度，扩容则需要申请新的数组长度，并把原数组元素拷贝到新数组中，如下图；
-![图片](/interview-8-03.png)
+![图片](/java/arraylist/interview-8-03.png)
 图中介绍了当List结合可用空间长度不足时则需要扩容，这主要包括如下步骤；
 1. 判断长度充足；ensureCapacityInternal(size + 1);
 2. 当判断长度不足时，则通过扩大函数，进行扩容；grow(int minCapacity)
@@ -100,7 +100,7 @@ private void rangeCheckForAdd(int index) {
 * 通过上面的元素插入我们知道，每插入一个元素，size自增一次size++。
 * 所以即使我们申请了10个容量长度的ArrayList，但是指定位置插入会依赖于size进行判断，所以会抛出IndexOutOfBoundsException异常。
 #### 元素迁移
-![图片](/interview-8-04.png)
+![图片](/java/arraylist/interview-8-04.png)
 指定位置插入的核心步骤包括；
 1. 判断size，是否可以插入。
 2. 判断插入后是否需要扩容；ensureCapacityInternal(size + 1);。
@@ -124,7 +124,7 @@ public void add(int index, E element) {
 
 ### 删除
 有了指定位置插入元素的经验，理解删除的过长就比较容易了，如下图；
-![图片](/interview-8-05.png)
+![图片](/java/arraylist/interview-8-05.png)
 ```java
 public E remove(int index) {
     rangeCheck(index);

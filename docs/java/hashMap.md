@@ -468,6 +468,7 @@ final Node<K,V> removeNode(int hash, Object key, Object value,
 * 另外红黑树的操作因为被包装了，只看使用上也是很容易。
 
 [原文点此](http://s.xiaoyuan.space/39WAGt)
+
 ---
 ### 扩展知识
 **jdk1.8（不含）以前版本并发插入时有几率出发死循环bug，因为1.8前版本是使用头插法，在并发环境下添加且触发扩容**，因为多个线程同时进行 put 操作，导致链表形成环形数据结构，一旦形成环形数据结构，在 get(key) 的时候就会产生死循环。

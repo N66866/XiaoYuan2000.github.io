@@ -44,6 +44,7 @@ module.exports = {
                             {title:'ArrayList',path:'/java/arrayList'}, // 以docs为根目录来查找文件
                             {title:'队列',path:'/java/queue'}, // 以docs为根目录来查找文件
                             {title:'String',path:'/java/string'}, // 以docs为根目录来查找文件
+                            {title:'ThreadLocal',path:'/java/ThreadLocal'}, // 以docs为根目录来查找文件
                             // 上面地址查找的是：docs>java>test.md 文件
                             // 自动加.md 每个子选项的标题 是该md文件中的第一个h1/h2/h3标题
                         ]

@@ -62,7 +62,7 @@ module.exports = {
                     {
                         title: '技术实践',
                         children: [
-                            '/practice/CI CD'
+                            {title:'CI/CD',path:'/practice/CI CD'}
                         ]
                     }
                 ]

@@ -1,4 +1,6 @@
 # 除了JDK PROXY、CGLIB，还有3种类代理方式
+> **第3、4、5章暂未使用过，仅做参考**  
+
 **定义接口**
 ```java
 public interface IUserApi {
@@ -316,7 +318,7 @@ public class PayServiceCGLIBInterceptor implements MethodInterceptor {
 * **同样的，被代理类的所有方法都会被增强**
 
 ---
-## ASM代理方式
+## 3. ASM代理方式
 ```java
 public class ASMProxy extends ClassLoader {
 
@@ -425,7 +427,7 @@ public void test_ByteBuddyProxy() throws Exception {
 * 这种方法比较高级，没办法做出自己备注  **TODO:待更新**
 
 ---
-## Javassist代理方式
+## 5. Javassist代理方式
 ```java
 public class JavassistProxy extends ClassLoader {
 

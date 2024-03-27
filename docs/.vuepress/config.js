@@ -53,7 +53,7 @@ module.exports = {
                         title:"Java并发编程",
                         collapsable: true,
                         children: [
-                            {title:'JUC',path:'/java/JUC'}, // 以docs为根目录来查找文件
+                            {title:'代理',path:'/java/proxy'}, // 以docs为根目录来查找文件
                         ]
                     }
                 ],

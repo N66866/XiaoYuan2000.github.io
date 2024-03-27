@@ -55,6 +55,7 @@ module.exports = {
                         children: [
                             {title:'proxy',path:'/java/proxy'}, // 以docs为根目录来查找文件
                             {title:'volatile',path:'/java/volatile'}, // 以docs为根目录来查找文件
+                            {title:'synchronized',path:'/java/synchronized',sidebarDepth: 3}, // 以docs为根目录来查找文件
                         ]
                     }
                 ],

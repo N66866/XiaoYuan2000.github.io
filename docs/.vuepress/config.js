@@ -42,7 +42,7 @@ module.exports = {
                         children: [
                             {title:'HashMap',path:'/java/hashMap'}, // 以docs为根目录来查找文件
                             {title:'ArrayList',path:'/java/arrayList'}, // 以docs为根目录来查找文件
-                            {title:'队列',path:'/java/queue'}, // 以docs为根目录来查找文件
+                            {title:'queue',path:'/java/queue'}, // 以docs为根目录来查找文件
                             {title:'String',path:'/java/string'}, // 以docs为根目录来查找文件
                             {title:'ThreadLocal',path:'/java/ThreadLocal'}, // 以docs为根目录来查找文件
                             // 上面地址查找的是：docs>java>test.md 文件

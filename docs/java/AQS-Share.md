@@ -1,6 +1,6 @@
 # AQS shared lock
 ## 基于 AQS 实现的锁有哪些？
-![pic](/java/AQS/interview-18-1.png)
+![pic](/java/AQS/interview-18-1.png)  
 AQS（AbstractQueuedSynchronizer），是 Java 并发包中非常重要的一个类，大部分锁的实现也是基于 AQS 实现的，包括：
 
 * `ReentrantLock`，可重入锁。这个是我们最开始介绍的锁，也是最常用的锁。通常会与 synchronized 做比较使用。

@@ -85,7 +85,7 @@ module.exports = {
                     {
                         title: 'JAVA/Spring奇难杂症',
                         children: [
-                            {title:'使用SpringUtil时发生的小问题',path:'/cannot-understand/'}
+                            {title:'使用SpringUtil时发生的小问题',path:'/cannot-understand/springutil'}
                         ]
                     }
                 ]

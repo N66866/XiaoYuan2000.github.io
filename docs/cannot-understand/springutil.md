@@ -11,11 +11,11 @@ SpringUtil implements ApplicationContextAware 比 @PostConstruct 后初始化，
 * 3. 采用解决方法：@Resource 把SpringUtil先行注入进包含@PostConstruct的类中。嘿！您猜怎么着！这次行了，太抽象了。
 * TODO： 各种百度和问AI没得出原因，知识不够暂且作罢，改日拿我的大知识狠狠地蹂躏小小Spring
 * 更新：静态方法不依赖于类所以你用@PostConstruct这个方法他并没有去加载这个bean，application context自然为空用@resource方式会强制加载所以没问题
-* 更新：（**无效**）有人建议 放弃使用 @PostConstruct 转而使用 InitializingBean(目的是将初始化方法后置), 还是报applicationContext空指针异常**（经查资料与验证，@PostConstruct方法是比实现 InitializingBean先执行的)**
-![pic](/java/cannot-understand/Spring-init-02.png)
-* 更新： 经过一个早上的研究，最终得出方法1 失败的原因：@DependsOn注解通常应该放在Spring管理的Bean上，因为它是用来指定Bean之间的依赖关系的。在实际使用中，通常将@DependsOn注解放在需要依赖其他Bean初始化的Bean上，以确保在初始化当前Bean之前先初始化所依赖的Bean。如果@DependsOn注解放在一个未被Spring管理的类上，它可能会被忽略，因为Spring只会处理被管理的Bean上的注解。**所以在方法1的基础上，将该类注册为Bean即可解决该问题。甚至说不要方法一的@DependsOn都可以**
+* 更新：（**无效**）有人建议 放弃使用 @PostConstruct 转而使用 InitializingBean(目的是将初始化方法后置), 还是报applicationContext空指针异常 **(经查资料与验证，@PostConstruct方法是比实现 InitializingBean先执行的)**  
+![pic](/cannot-understand/spring-init-02.png)
+* 更新： 经过一个早上的研究，最终得出方法1 失败的原因：@DependsOn注解通常应该放在Spring管理的Bean上，因为它是用来指定Bean之间的依赖关系的。在实际使用中，通常将@DependsOn注解放在需要依赖其他Bean初始化的Bean上，以确保在初始化当前Bean之前先初始化所依赖的Bean。如果@DependsOn注解放在一个未被Spring管理的类上，它可能会被忽略，因为Spring只会处理被管理的Bean上的注解。**所以在方法1的基础上，将该类注册为Bean即可解决该问题。甚至说不要方法1的@DependsOn都可以**
 ### Spring的初始化顺序
-![pic](/java/cannot-understand/Spirng-init-01.png)
+![pic](/cannot-understand/spring-init-01.png)
 ```java
 @Component
 public class MyInitializingBean implements InitializingBean {
@@ -45,7 +45,7 @@ public class MyInitializingBean implements InitializingBean {
 }
 ```
 
-* [另一解决方法BeanFactoryPostProcessor详解](http://s.xiaoyuan.space/2EW9Hz)
+* 另一解决方法: [BeanFactoryPostProcessor详解](http://s.xiaoyuan.space/2EW9Hz)
 
 ### 扩展小知识
 **1. ApplicationContextAware 需要注册为Spring的Bean才会被处理，在没有被注册为Bean的情况下，Spring也不会自动地将ApplicationContext传递给该类。**

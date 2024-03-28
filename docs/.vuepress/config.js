@@ -14,7 +14,7 @@ module.exports = {
                     {text: "Spring", link: "/spring/"},
                     {text: "git", link: "/git/"},
                     {text: "技术实践", link: "/practice/"},
-                    {text: "奇难杂症", link: "/cannot-understand"},
+                    {text: "奇难杂症", link: "/cannot-understand/"},
                 ]
             }, // 内部链接 以docs为根目录
             // 下拉列表
@@ -56,6 +56,8 @@ module.exports = {
                             {title:'proxy',path:'/java/proxy'}, // 以docs为根目录来查找文件
                             {title:'volatile',path:'/java/volatile'}, // 以docs为根目录来查找文件
                             {title:'synchronized',path:'/java/synchronized',sidebarDepth: 3}, // 以docs为根目录来查找文件
+                            {title:'ReentrantLock',path:'/java/ReentrantLock',sidebarDepth: 3}, // 以docs为根目录来查找文件
+                            {title:'AbstractQueuedSynchronizer',path:'/java/AQS',sidebarDepth: 3}, // 以docs为根目录来查找文件
                         ]
                     }
                 ],
@@ -82,7 +84,7 @@ module.exports = {
                     {
                         title: 'JAVA/Spring奇难杂症',
                         children: [
-                            {title:'SpringUtil初始化慢于@PostConstruct',path:'/cannot-understand/springutil'}
+                            {title:'使用SpringUtil时发生的小问题',path:'/cannot-understand/springutil'}
                         ]
                     }
                 ]

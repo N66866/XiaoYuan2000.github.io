@@ -174,7 +174,6 @@ ReentrantLock 实现了非公平锁和公平锁，所以在调用 lock.lock(); �
 
 1. 非公平锁，会直接使用 CAS 进行抢占，修改变量 state 值。如果成功则直接把自己的线程设置到 exclusiveOwnerThread，也就是获得锁成功。不成功后续分析
 2. 公平锁，则不会进行抢占，而是规规矩矩的进行排队。老实人
-### 3. compareAndSetState
 ```java
 final void lock() {
     if (compareAndSetState(0, 1))
@@ -184,7 +183,7 @@ final void lock() {
 }
 ```
 在非公平锁的实现类里，获取锁的过程，有这样一段 CAS 操作的代码。```compareAndSetState``` 赋值成功则获取锁。那么 CAS 这里面做了什么操作？  
-
+### 3. compareAndSetState
 ```java
 protected final boolean compareAndSetState(int expect, int update) {
     // See below for intrinsics setup to support this
@@ -240,6 +239,7 @@ public final void acquire(int arg) {
 3. acquireQueued，负责把 addWaiter 返回的 Node 节点添加到队列结尾，并会执行获取锁操作以及判断是否把当前线程挂起。
 4. selfInterrupt，是 AQS 中的 Thread.currentThread().interrupt() 方法调用，它的主要作用是在执行完 acquire 之前自己执行中断操作。
 ### tryAcquire
+**非公平锁的tryAcquire会调用该方法**
 ```java
 //非公平锁的tryAcquire会调用该方法
 final boolean nonfairTryAcquire(int acquires) {
@@ -344,6 +344,7 @@ final boolean acquireQueued(final Node node, int arg) {
 #### setHead
 ```java
 private void setHead(Node node) {
+    //这个是等待队列的结点，获取锁成功后就把线程信息释放了。也就是说获取到锁后，他的目标已达成，可以移出队列。
     head = node;
     node.thread = null;
     node.prev = null;

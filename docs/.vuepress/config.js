@@ -58,6 +58,7 @@ module.exports = {
                             {title:'synchronized',path:'/java/synchronized',sidebarDepth: 3}, // 以docs为根目录来查找文件
                             {title:'ReentrantLock',path:'/java/ReentrantLock',sidebarDepth: 3}, // 以docs为根目录来查找文件
                             {title:'AbstractQueuedSynchronizer',path:'/java/AQS',sidebarDepth: 3}, // 以docs为根目录来查找文件
+                            {title:'AQS-Share',path:'/java/AQS-Share',sidebarDepth: 3}, // 以docs为根目录来查找文件
                         ]
                     }
                 ],

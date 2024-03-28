@@ -14,7 +14,7 @@ module.exports = {
                     {text: "Spring", link: "/spring/"},
                     {text: "git", link: "/git/"},
                     {text: "技术实践", link: "/practice/"},
-                    {text: "待更新", link: "/update"},
+                    {text: "奇难杂症", link: "/cannot-understand"},
                 ]
             }, // 内部链接 以docs为根目录
             // 下拉列表
@@ -74,6 +74,15 @@ module.exports = {
                         title: '技术实践',
                         children: [
                             {title:'CI/CD',path:'/practice/CI CD'}
+                        ]
+                    }
+                ],
+                '/cannot-understand/': [
+                    // '/git/',
+                    {
+                        title: 'JAVA/Spring奇难杂症',
+                        children: [
+                            {title:'SpringUtil初始化慢于@PostConstruct',path:'/cannot-understand/springutil'}
                         ]
                     }
                 ]

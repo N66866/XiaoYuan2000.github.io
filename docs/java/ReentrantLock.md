@@ -47,6 +47,9 @@ static final class FairSync extends Sync {
 }
 ```
 * 公平锁和非公平锁，主要是在方法 tryAcquire 中，是否有``` !hasQueuedPredecessors() ```判断。
+> 所以hasQueuedPredecessors()这个环节容不得半点闪失，否则会直接破坏掉公平性，假如现在出现了这样的情况：
+线程1已经持有锁了，这时线程2来争抢这把锁，走到hasQueuedPredecessors()，判断出为false，线程2继续运行，然后线程2肯定获取锁失败（因为锁这时是被线程1占有的），因此就进入到等待队列中,而碰巧不巧，这个时候线程3也来抢锁了，按照正常流程走到了hasQueuedPredecessors()方法，线程3这时就紧接着准备开始CAS操作了，又碰巧，这时线程1释放锁了，现在的情况就是，线程3直接开始CAS判断，而线程2还在插入节点状态，结果可想而知，居然是线程3先拿到了锁，这显然是违背了公平锁的公平机制。![pic](/java/reentrantLock/interview-16-05.png)**因此公不公平全看hasQueuedPredecessors()，而此方法只有在等待队列中存在节点时才能保证不会出现问题。所以公平锁，只有在等待队列存在节点时，才是真正公平的。**
+
 ### 队列首位判断
 ```java
 public final boolean hasQueuedPredecessors() {

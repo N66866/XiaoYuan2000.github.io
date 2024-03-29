@@ -60,6 +60,13 @@ module.exports = {
                             {title:'AbstractQueuedSynchronizer',path:'/java/AQS',sidebarDepth: 3}, // 以docs为根目录来查找文件
                             {title:'AQS Share Lock',path:'/java/AQS-Share',sidebarDepth: 3}, // 以docs为根目录来查找文件
                         ]
+                    },
+                    {
+                        title:"Java多线程",
+                        collapsable: true,
+                        children: [
+                            {title:'Thread',path: '/java/thread',sidebarDepth: 4}
+                        ]
                     }
                 ],
                 '/git/': [

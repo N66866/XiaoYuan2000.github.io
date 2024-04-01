@@ -83,7 +83,8 @@ module.exports = {
                     {
                         title: '技术实践',
                         children: [
-                            {title:'CI/CD',path:'/practice/CI CD'}
+                            {title:'CI/CD',path:'/practice/CI CD'},
+                            {title:'Spring中间件开发-分库分表',path:'/practice/db-router'},
                         ]
                     }
                 ],

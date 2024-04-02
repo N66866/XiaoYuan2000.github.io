@@ -1,7 +1,8 @@
-# db-router
+# db-router  
+
 最近写代码时遇到需要用到分库分表的场景，但是引入shardingsphere的话太重了，老板不允许，打算自己写一个轻量级的分库分表组件。
----
-[gitee](https://gitee.com/xiaoyuan2000/n-db-router-spring-boot-starter)
+
+[gitee开源](https://gitee.com/xiaoyuan2000/n-db-router-spring-boot-starter)
 
 ## pom文件
 因为要用到mybatis与SpringBoot，所以导入相关依赖
@@ -168,7 +169,14 @@ public @interface DBRouterStrategy {
 }
 ```
 
-## 动态数据源配置
+## 动态数据源配置  
+AbstractRoutingDataSource 是 Spring 中的一个抽象类，它是一个数据源路由抽象类，通常用于实现动态数据源切换或多数据源的场景。具体来说，它允许应用程序根据一些条件（例如线程绑定的数据源标识、请求参数、用户信息等）来动态地选择使用哪个数据源。
+
+该类提供了一个抽象方法 determineCurrentLookupKey()，该方法需要被子类实现。子类需要根据具体的业务逻辑来决定当前应该使用的数据源的标识，比如数据源的名称或者其他标识符。AbstractRoutingDataSource 会根据 determineCurrentLookupKey() 返回的值来选择对应的数据源进行操作。
+
+通常情况下，你需要创建一个继承自 AbstractRoutingDataSource 的子类，并且实现 determineCurrentLookupKey() 方法来指定数据源的选择逻辑。然后，将这个数据源路由器配置到 Spring 中，Spring 在执行数据库操作时会根据实际情况动态地选择数据源。
+
+这种技术常用于实现读写分离、分库分表、多租户系统等场景，它使得应用程序可以根据实际需求动态地选择使用哪个数据源，从而提高了系统的灵活性和扩展性。
 ```java
 public class DynamicDataSource extends AbstractRoutingDataSource {
     @Override
@@ -356,6 +364,7 @@ public class DBRouterStrategyHashCode implements IDBRouterStrategy {
     public void doRouter(String dbKeyAttr) {
         int size = dbRouterConfig.getDbCount() * dbRouterConfig.getTbCount();
         // 扰动函数 & 分库分表量 得出下标
+        //注入！注意！扰动函数是参考了hashmap源码，这种分片方法限定了size 必须为2的幂次方分库。（只是为了应用一下hashmap的扰动函数，可以新建一个策略取余计算）
         int idx = (dbKeyAttr.hashCode() ^ dbKeyAttr.hashCode() >>> 16) & (size - 1);
         // 补充视频教程；https://t.zsxq.com/0f8PDPWtK - 评论区还有计算的图稿
         /**
@@ -710,3 +719,51 @@ public interface IUserStrategyExportDao {
 1. 先使用配置类注入对应的多数据源、分库分表配置，创建一个继承自 `AbstractRoutingDataSource `的子类，并且实现 `determineCurrentLookupKey()` 方法来指定数据源的选择逻辑。然后，将这个数据源路由器配置到 Spring 中，Spring 在执行数据库操作时会根据实际情况动态地选择数据源。
 2. 然后实现一个aop切面，对自定义注解`@DBRouter`进行拦截处理，从自定义注解`@DBRouter`中获取分片键key，然后反射从切点获取args中key对应的value。例如：uId:12345,这个uId就是DBRouter里的key，12345就是从切点args里传入的value。然后调用分片策略`IDBRouterStrategy`进行分库分表计算并存入ThreadLocal中，供给Mybatis自定义拦截器插件以及步骤1的动态数据源选择使用
 3. mybatis自定义拦截器插件中通过statementHandleer获取对应的执行mapper以及执行方法。再判断该mapper是否有开启分库分表策略，有的话就从步骤2的ThreadLocal中获取分表键，至于分库在步骤1的spring配置中会自动切换。
+![pic](/practice/db-router/Fm85ZCdK6YBuTtBgBglPC5EME4Vo.png)
+
+## 为什么要自研？
+1. 维护性；市面的路由组件比如 `shardingsphere` 但过于庞大，还需要随着版本做一些升级。而我们需要更少的维护成本。
+2. 扩展性；结合自身的业务需求，我们的路由组件可以分库分表、自定义路由协议，扫描指定库表数据等各类方式。研发扩展性好，简单易用。
+3. 安全性；自研的组件更好的控制了安全问题，不会因为一些额外引入的jar包，造成安全风险。
+
+当然，我们的组件主要是为了更好的适应目前系统的诉求，所以使用自研的方式处理。就像shardingsphere 的市场占有率也不是 100% 那么肯定还有很多公司在自研，甚至各个大厂也都自研一整套分布式服务，来让自己的系统更稳定的运行。分库分表基本是单表200万，才分。
+
+## 为什么分库分表？
+1. 我们分库分表用的非常熟。但不能为了等到系统到了200万数据，才拆。那么工作量会非常大
+2. 我们的做法是，因为有成熟方案，所以前期就分库分表了。但，为了解释服务器空间。所以把分库分表的库，用服务器虚拟出来机器安装。这样即不过多的占用服务器资源，也方便后续数据量真的上来了，好拆分。
+3. 同时，抽奖系统，是瞬时峰值较高的系统，历史数据不一定多。所以我们希望，用户可以快速的检索到个人数据，做最优响应。因为大家都知道，抽奖这东西，push发完，基本就1~3分钟结束，10分钟人都没了。所以我们这也是做了分库分表的理由。  
+
+## 组件介绍
+- **项目名称**：DB-Router 数据库路由组件
+- **系统架构**：基于 AOP、Spring 动态数据源切换、MyBatis 插件开发、散列算法等技术，实现的 SpringBoot Starter 数据库路由组件
+- **核心技术**：AOP、AbstractRoutingDataSource、MyBatis Plugin StatementHandler、扰动函数、哈希散列、ThreadLocal
+- **项目描述**：此组件项目是为了解决在分库分表场景下，开发一款可以应对自身业务场景多变特性，即支持个性的分库分表、只分库或者只分表以及双字段控制分库和分表，也可以自定义扩展监控、扫描、策略等规则，同时又能满足简单维护迭代的数据库路由组件。这块路由组件在设计实现上除核心技术外，还进行了严格雪崩标准(SAC) 测试，确保数据的散列效果。
+- **我的职责**：
+  - 设计分库分表数据库路由组件的架构模型结构，运用设计模式对这块组件进行功能的分治和实现。
+  - 调研平方散列、除法散了、乘法散列、哈希散列以及斐波那契散列，并结合雪崩测试，选择了一块适合数据库路由的散列算法，并做功能的开发实现。
+  - 引入 MyBatis Plugin 插件开发功能，对执行的 SQL 语句动态变更表信息，做到执行对应表的策略设计。同时扩展了监控和日志功能，方便在调试和验证时，可以打印相关SQL语句。
+
+## 组件技术问题
+简单技术问题：
+
+1. 什么是 AOP？在 DB-Router 中如何应用 AOP？
+2. AbstractRoutingDataSource 是什么？它的作用是什么？
+3. ThreadLocal 是什么？在 DB-Router 中是如何使用的？
+4. 什么是哈希散列？在 DB-Router 中为什么选择了哈希散列算法？
+5. SAC 测试是什么？在 DB-Router 中如何应用 SAC 测试？
+
+中等技术问题：
+
+1. 什么是 MyBatis Plugin？在 DB-Router 中如何应用 MyBatis Plugin 实现动态变更表信息？
+2. 分库分表的散列算法有哪些，各自的优缺点是什么？
+3. 在 DB-Router 中如何支持个性化的分库分表控制？请结合具体实例说明。
+4. 在 DB-Router 中如何实现扩展监控、扫描、策略等规则？
+5. 什么是雪崩测试？在 DB-Router 中如何进行雪崩测试？
+
+难度技术问题：
+
+1. 在 DB-Router 的架构模型中，如何实现扩展性和灵活性的平衡？
+2. 在 DB-Router 中如何保证数据路由的高效性和准确性？
+3. 在 DB-Router 中，如何避免分库分表后产生的性能问题？
+4. 在 DB-Router 中如何应对高并发的场景？请结合具体实例说明。
+5. 在 DB-Router 的设计过程中，遇到了哪些技术难点？是如何解决的？

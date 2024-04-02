@@ -1,4 +1,712 @@
 # db-router
 最近写代码时遇到需要用到分库分表的场景，但是引入shardingsphere的话太重了，老板不允许，打算自己写一个轻量级的分库分表组件。
 ---
+[gitee](https://gitee.com/xiaoyuan2000/n-db-router-spring-boot-starter)
 
+## pom文件
+因为要用到mybatis与SpringBoot，所以导入相关依赖
+```xml
+<parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>2.7.4</version>
+  </parent>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-configuration-processor</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-autoconfigure</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-aop</artifactId>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.mybatis.spring.boot/mybatis-spring-boot-starter -->
+    <dependency>
+      <groupId>org.mybatis.spring.boot</groupId>
+      <artifactId>mybatis-spring-boot-starter</artifactId>
+      <version>2.1.4</version>
+    </dependency>
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <version>8.0.26</version>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-test -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.springframework/spring-test -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>commons-beanutils</groupId>
+      <artifactId>commons-beanutils</artifactId>
+      <version>1.9.4</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
+      <version>2.6</version>
+    </dependency>
+    <dependency>
+      <groupId>com.alibaba</groupId>
+      <artifactId>fastjson</artifactId>
+      <version>1.2.75</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.12</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>db-router-spring-boot-starter</finalName>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+        <includes>
+          <include>**/**</include>
+        </includes>
+      </resource>
+    </resources>
+    <testResources>
+      <testResource>
+        <directory>src/test/resources</directory>
+        <filtering>true</filtering>
+        <includes>
+          <include>**/**</include>
+        </includes>
+      </testResource>
+    </testResources>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.12.4</version>
+        <configuration>
+          <skipTests>true</skipTests>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>2.5</version>
+        <configuration>
+          <encoding>${project.build.sourceEncoding}</encoding>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.3.2</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+          <encoding>${project.build.sourceEncoding}</encoding>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.1.2</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+```
+
+## 自定义注解
+
+路由注解、支持注解自定义分片键
+### 元注解Retention
+**如果运行时没有被@Retention(RetentionPolicy.RUNTIME)元注解修饰，那么它在运行时将不可用。这意味着你将无法通过反射来获取或操作这个注解。**
+> Java中的@Retention注解用于指定注解的保留策略，它有三个可选的保留策略：RetentionPolicy.SOURCE、RetentionPolicy.CLASS和RetentionPolicy.RUNTIME。其中，RetentionPolicy.RUNTIME表示注解将在运行时保留，并可以通过反射来访问和处理。
+如果一个注解没有显式地使用@Retention注解，并且在运行时没有默认的保留策略为RetentionPolicy.RUNTIME，则它的保留策略将是默认的RetentionPolicy.CLASS，这意味着它将在编译时被保留在编译后的字节码文件中，但在运行时将不可用。
+因此，如果你希望在运行时通过反射来获取和处理注解，你需要确保注解被@Retention(RetentionPolicy.RUNTIME)元注解修饰，否则它将无法在运行时使用。  
+
+### 代码实现
+```java
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.TYPE, ElementType.METHOD})
+public @interface DBRouter {
+    String key() default "";
+}
+```
+
+路由开关，用于控制是否某个表是否开启分库分表策略
+```java
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.TYPE, ElementType.METHOD})
+public @interface DBRouterStrategy {
+    boolean enableSplitTable() default false;
+}
+```
+
+## 动态数据源配置
+```java
+public class DynamicDataSource extends AbstractRoutingDataSource {
+    @Override
+    protected Object determineCurrentLookupKey() {
+        // 这里根据具体的逻辑来确定当前线程应该使用的数据源标识符
+        // 例如，可以从ThreadLocal、请求参数等获取信息，并返回相应的数据源标识符
+        return "db" + DBContextHolder.getDBKey();
+    }
+}
+```
+
+## 组件配置类
+### 需要注意的小坑与基础
+* 如果需要编写yml时有提示，只能有一个构造函数，多一个就不出现提示。
+* 在使用SpringBoot编写组件jar包时，因为没有使用`SpringBootApplication`注解，要使用`@ComponentScan`来配置扫描路径，用于扫描@Component注解
+	* 因为`@SpringBootApplication`注解中包含了@ComponentScan
+* 在自动注入属性时，`private Map<String, DBRouterConfigDetail> datasourceMap;` 注入失败，研究了很久发现是`DBRouterConfigDetail`没有写无参构造函数，因为属性注入会调用无参构造函数+setter方法注入属性。没有无参构造就无法构造又不报错，只会注入失败。导致属性为null
+	* @ConfigurationProperties 注解通常会使用无参构造函数来创建对象，并通过 setter 方法来注入属性值。
+
+### 代码实现
+```java
+@Component()
+@ConfigurationProperties(prefix = "mini-db-router.jdbc.datasource")
+public class DBRouterConfig {
+    /**
+     * 分库数量
+     */
+    private int dbCount;
+    /**
+     * 分表数量
+     */
+    private int tbCount;
+    /**
+     * 默认分片键
+     */
+    private String routerKey;
+    /**
+     * 默认数据源
+     */
+    private String defaultDatasource;
+    /**
+     * 数据源map 
+	*/
+    private Map<String, DBRouterConfigDetail> datasourceMap;
+
+    public Map<String, DBRouterConfigDetail> getDatasourceMap() {
+        return datasourceMap;
+    }
+
+    public void setDatasourceMap(Map<String, DBRouterConfigDetail> datasourceMap) {
+        this.datasourceMap = datasourceMap;
+    }
+
+    public String getDefaultDatasource() {
+        return defaultDatasource;
+    }
+
+    public void setDefaultDatasource(String defaultDataSource) {
+        this.defaultDatasource = defaultDataSource;
+    }
+
+    public int getDbCount() {
+        return dbCount;
+    }
+
+    public void setDbCount(int dbCount) {
+        this.dbCount = dbCount;
+    }
+
+    public int getTbCount() {
+        return tbCount;
+    }
+
+    public void setTbCount(int tbCount) {
+        this.tbCount = tbCount;
+    }
+
+    public String getRouterKey() {
+        return routerKey;
+    }
+
+    public void setRouterKey(String routerKey) {
+        this.routerKey = routerKey;
+    }
+
+    public DBRouterConfig() {
+    }
+
+    public DBRouterConfig(int dbCount, int tbCount, String routerKey, String defaultDatasource,Map<String,DBRouterConfigDetail> datasourceMap) {
+        this.dbCount = dbCount;
+        this.tbCount = tbCount;
+        this.routerKey = routerKey;
+        this.defaultDatasource = defaultDatasource;
+        this.datasourceMap = datasourceMap;
+    }
+```
+
+定义一个Holder用于保存线程变量
+```java
+public class DBContextHolder {
+    private static final ThreadLocal<String> dbKey = new ThreadLocal<>();
+    private static final ThreadLocal<String> tbKey =new ThreadLocal<>();
+    public static void setDBKey(String dbKeyIdx){
+        dbKey.set(dbKeyIdx);
+    }
+
+    public static String getDBKey(){
+        return dbKey.get();
+    }
+
+    public static void setTBKey(String tbKeyIdx){
+        tbKey.set(tbKeyIdx);
+    }
+
+    public static String getTBKey(){
+        return tbKey.get();
+    }
+
+    public static void clearDBKey(){
+        dbKey.remove();
+    }
+
+    public static void clearTBKey(){
+        tbKey.remove();
+    }
+}
+```
+
+## 路由分库分表策略
+定义策略接口
+```java
+public interface IDBRouterStrategy {
+    /**
+     * 路由计算
+     *
+     * @param dbKeyAttr 路由字段
+     */
+    void doRouter(String dbKeyAttr);
+
+    /**
+     * 手动设置分库路由
+     *
+     * @param dbIdx 路由库，需要在配置范围内
+     */
+    void setDBKey(int dbIdx);
+
+    /**
+     * 手动设置分表路由
+     *
+     * @param tbIdx 路由表，需要在配置范围内
+     */
+    void setTBKey(int tbIdx);
+
+    /**
+     * 获取分库数
+     *
+     * @return 数量
+     */
+    int dbCount();
+
+    /**
+     * 获取分表数
+     *
+     * @return 数量
+     */
+    int tbCount();
+
+    /**
+     * 清除路由
+     */
+    void clear();
+}
+```
+hash分库分表策略实现类
+```java
+public class DBRouterStrategyHashCode implements IDBRouterStrategy {
+    private final DBRouterConfig dbRouterConfig;
+    private final Logger logger = LoggerFactory.getLogger(DBRouterStrategyHashCode.class);
+
+    public DBRouterStrategyHashCode(DBRouterConfig dbRouterConfig) {
+        this.dbRouterConfig = dbRouterConfig;
+    }
+
+    @Override
+    public void doRouter(String dbKeyAttr) {
+        int size = dbRouterConfig.getDbCount() * dbRouterConfig.getTbCount();
+        // 扰动函数 & 分库分表量 得出下标
+        int idx = (dbKeyAttr.hashCode() ^ dbKeyAttr.hashCode() >>> 16) & (size - 1);
+        // 补充视频教程；https://t.zsxq.com/0f8PDPWtK - 评论区还有计算的图稿
+        /**
+         * idx / dbRouterConfig.getTbCount() + 1 => 可以得出在哪个库，
+         * 例如： 每个库4个分表，idx散列得出5，那么5/4 + 1 = 1+1 = 2，那么就在第二个库
+         * idx 散列得出取值范围 0 ~ size -1 ，所以dbIdx最大不超过DbCount
+         *
+         * int tbIdx = idx - dbRouterConfig.getTbCount() * (dbIdx - 1);
+         * 例如： 5 - 4 * 1 = 1 在第一个表
+         */
+        int dbIdx = idx / dbRouterConfig.getTbCount() + 1;
+        int tbIdx = idx - dbRouterConfig.getTbCount() * (dbIdx - 1);
+        DBContextHolder.setDBKey(String.format("%02d", dbIdx));
+        DBContextHolder.setTBKey(String.format("%03d", tbIdx));
+        logger.debug("数据库路由 dbIdx：{} tbIdx：{}",  dbIdx, tbIdx);
+
+    }
+
+    @Override
+    public void setDBKey(int dbIdx) {
+        DBContextHolder.setDBKey(String.format("%02d",dbIdx));
+    }
+
+    @Override
+    public void setTBKey(int tbIdx) {
+        DBContextHolder.setTBKey(String.format("%03d",tbIdx));
+    }
+
+    @Override
+    public int dbCount() {
+        return dbRouterConfig.getDbCount();
+    }
+
+    @Override
+    public int tbCount() {
+        return dbRouterConfig.getTbCount();
+    }
+
+    @Override
+    public void clear() {
+        DBContextHolder.clearDBKey();
+        DBContextHolder.clearTBKey();
+    }
+}
+```
+如果需要其他分库分表策略则新建一个策略实现接口即可。
+
+## mybatis自定义拦截器
+用于拦截修改sql，注释已经写好
+```java
+//@Intercepts({@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})})
+//拦截          StatementHandler 的使用Connection.class, Integer.class的 prepare方法
+@Intercepts({@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})})
+public class DynamicMybatisPlugin implements Interceptor {
+    private final Pattern pattern = Pattern.compile("(from|into|update)[\\s]{1,}(\\w{1,})", Pattern.CASE_INSENSITIVE);
+
+    @Override
+    public Object intercept(Invocation invocation) throws Throwable {
+        //获取statementHandler invocation拦截了类注解上的配置
+        StatementHandler statementHandler = (StatementHandler) invocation.getTarget();
+        //调用MetaObject.forObject 操作statementHandler 里的属性，避免直接使用了java反射，提高可读性
+        MetaObject metaObject = MetaObject.forObject(statementHandler, SystemMetaObject.DEFAULT_OBJECT_FACTORY, SystemMetaObject.DEFAULT_OBJECT_WRAPPER_FACTORY, new DefaultReflectorFactory());
+        MappedStatement mappedStatement = (MappedStatement) metaObject.getValue("delegate.mappedStatement");
+
+        // 获取自定义注解判断是否进行分表操作
+        //MappedStatement 的 ID 是由 namespace 和 statement 的 ID 组成的。它的格式通常是 namespace.statementId。
+        //namespace 是 Mapper 接口的完全限定名，或者是 Mapper XML 文件的命名空间。
+        //statementId 是 Mapper 接口中的方法名，或者是 Mapper XML 文件中 SQL 语句的 ID。
+        String id = mappedStatement.getId();
+        //把statementId去掉 即把方法名去掉，留下mapper接口的全限定名称
+        String className = id.substring(0, id.lastIndexOf("."));
+        Class<?> clazz = Class.forName(className);
+        // 获取自定义注解判断是否进行分表操作
+        DBRouterStrategy annotation = clazz.getAnnotation(DBRouterStrategy.class);
+        if(null == annotation || !annotation.enableSplitTable()){
+            //没有用DBRouterStrategy 或者 没开启分库分表 直接返回
+            return invocation.proceed();
+        }
+
+        //从 statementHandler获取出sql
+        BoundSql boundSql = statementHandler.getBoundSql();
+        String sql = boundSql.getSql();
+
+        //替换表名
+        Matcher matcher = pattern.matcher(sql);
+        String tableName = null;
+        if (matcher.find()) {
+            //匹配上了正则
+            tableName = matcher.group().trim();
+        }
+        String actualSql = matcher.replaceAll(tableName + "_" + DBContextHolder.getTBKey());
+        //获取字段
+        Field sqlField = boundSql.getClass().getDeclaredField("sql");
+        sqlField.setAccessible(true);
+        //修改boundSql对象的“sql”字段为actualSql
+        sqlField.set(boundSql,actualSql);
+        sqlField.setAccessible(false);
+
+        return invocation.proceed();
+    }
+
+
+}
+```
+
+
+## 自动装配数据源
+```java
+@Configuration
+@ComponentScan(basePackages = "space.xiaoyuan.middleware.db.router")
+public class DataSourceAutoConfig{
+    @Resource
+    private DBRouterConfig dbRouterConfig;
+    /**
+     * 默认数据源配置
+     */
+    @Bean()
+    public IDBRouterStrategy routerStrategy(){
+        return new DBRouterStrategyHashCode(dbRouterConfig);
+    }
+    @Bean("db-router-point")
+    @ConditionalOnMissingBean
+    public DBRouterJoinPoint joinPoint(IDBRouterStrategy routerStrategy){
+        return new DBRouterJoinPoint(dbRouterConfig,routerStrategy);
+    }
+
+    @Bean()
+    public Interceptor mybatisPlugin(){
+        return new DynamicMybatisPlugin();
+    }
+
+    @Bean()
+    public DataSource dataSource(){
+        Map<Object,Object> targetDataSources = new HashMap<>();
+        dbRouterConfig.getDatasourceMap().forEach((key,value)->{
+            targetDataSources.put(key,new DriverManagerDataSource(
+                    value.getUrl(),
+                    value.getUsername(),
+                    value.getPassword()
+                    ));
+        });
+
+        DynamicDataSource dynamicDataSource = new DynamicDataSource();
+        dynamicDataSource.setTargetDataSources(targetDataSources);
+        dbRouterConfig.getDatasourceMap().get(dbRouterConfig.getDefaultDatasource());
+
+        DBRouterConfigDetail dbRouterConfigDetail = dbRouterConfig.getDatasourceMap().get(dbRouterConfig.getDefaultDatasource());
+        dynamicDataSource.setDefaultTargetDataSource(new DriverManagerDataSource(
+                dbRouterConfigDetail.getUrl(),
+                dbRouterConfigDetail.getUsername(),
+                dbRouterConfigDetail.getPassword())
+        );
+
+        return dynamicDataSource;
+    }
+
+    /**
+     * 事务管理器
+     * 当初这个Bean写错名字，写成transactionManager 导致报错找不到这个Bean
+     */
+    @Bean
+    public TransactionTemplate transactionTemplate(DataSource dataSource){
+        DataSourceTransactionManager dataSourceTransactionManager = new DataSourceTransactionManager();
+        dataSourceTransactionManager.setDataSource(dataSource);
+
+        TransactionTemplate transactionTemplate = new TransactionTemplate();
+        //设置事务传播级别
+        transactionTemplate.setPropagationBehavior(DefaultTransactionDefinition.PROPAGATION_REQUIRED);
+        //设置事务管理器
+        transactionTemplate.setTransactionManager(dataSourceTransactionManager);
+        return transactionTemplate;
+    }
+}
+```
+
+## aop切面
+```java
+@Aspect
+public class DBRouterJoinPoint {
+    @Pointcut("@annotation(space.xiaoyuan.middleware.db.router.annotation.DBRouter)")
+    public void aopPoint(){
+
+    }
+    private final Logger logger = LoggerFactory.getLogger(DBRouterJoinPoint.class);
+    public DBRouterJoinPoint(DBRouterConfig dbRouterConfig, IDBRouterStrategy routerStrategy) {
+        this.dbRouterConfig = dbRouterConfig;
+        this.routerStrategy = routerStrategy;
+    }
+
+    private final DBRouterConfig dbRouterConfig;
+    private final IDBRouterStrategy routerStrategy;
+
+
+    /**
+     * 在 @Around 注解的方法中，可以将目标方法的参数声明为一个 DBRouter 类型的参数，这样 Spring AOP 就会自动将匹配的注解实例传递给该参数。
+     * @param pjp
+     * @param dbRouter
+     * @return
+     */
+    @Around("aopPoint() && @annotation(dbRouter)")
+    public Object doRouter(ProceedingJoinPoint pjp, DBRouter dbRouter) throws Throwable {
+        String routerKey = dbRouter.key();
+        if(StringUtils.isBlank(routerKey) && StringUtils.isBlank(dbRouterConfig.getRouterKey())){
+            throw new RuntimeException("annotation DBRouter key is null!");
+        }
+        Object[] args = pjp.getArgs();
+        //根据分片键获取值
+        String routerKeyVal = getAttrValue(routerKey, args);
+        routerStrategy.doRouter(routerKeyVal);
+        try{
+            return pjp.proceed();
+        }finally {
+            routerStrategy.clear();
+        }
+    }
+
+    public String getAttrValue(String attr, Object[] args) {
+        if (1 == args.length) {
+            Object arg = args[0];
+            if (arg instanceof String) {
+                return arg.toString();
+            }
+        }
+
+        String filedValue = null;
+        for (Object arg : args) {
+            try {
+                if (StringUtils.isNotBlank(filedValue)) {
+                    break;
+                }
+                // filedValue = BeanUtils.getProperty(arg, attr);
+                // fix: 使用lombok时，uId这种字段的get方法与idea生成的get方法不同，会导致获取不到属性值，改成反射获取解决
+                filedValue = String.valueOf(this.getValueByName(arg, attr));
+            } catch (Exception e) {
+                logger.error("获取路由属性值失败 attr：{}", attr, e);
+            }
+        }
+        return filedValue;
+    }
+
+    /**
+     * 获取对象的特定属性值
+     *
+     * @author tang
+     * @param item 对象
+     * @param name 属性名
+     * @return 属性值
+     */
+    private Object getValueByName(Object item, String name) {
+        try {
+            Field field = getFieldByName(item, name);
+            if (field == null) {
+                return null;
+            }
+            field.setAccessible(true);
+            Object o = field.get(item);
+            field.setAccessible(false);
+            return o;
+        } catch (IllegalAccessException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 根据名称获取方法，该方法同时兼顾继承类获取父类的属性
+     *
+     * @author tang
+     * @param item 对象
+     * @param name 属性名
+     * @return 该属性对应方法
+     */
+    private Field getFieldByName(Object item, String name) {
+        try {
+            Field field;
+            try {
+                field = item.getClass().getDeclaredField(name);
+            } catch (NoSuchFieldException e) {
+                field = item.getClass().getSuperclass().getDeclaredField(name);
+            }
+            return field;
+        } catch (NoSuchFieldException e) {
+            return null;
+        }
+    }
+
+}
+```
+
+## 自动装配
+在resources/META-INF目录下创建spring.factories并写入`org.springframework.boot.autoconfigure.EnableAutoConfiguration=space.xiaoyuan.middleware.db.router.config.DataSourceAutoConfig` 即可自动装配DataSourceAutoConfig
+
+## 使用方式
+在需要使用该分库分表组件的pom文件中引入依赖
+```xml
+<dependency>
+        <groupId>space.xiaoyuan.middleware</groupId>
+        <artifactId>n-db-router-spring-boot-starter</artifactId>
+        <version>1.0-SNAPSHOT</version>
+      </dependency>
+```
+并添加配置文件
+```yaml
+mini-db-router:
+  jdbc:
+    datasource:
+      db-count: 2
+      tb-count: 4
+      router-key: uId
+      default-datasource: db00
+      datasource-map:
+        db00:
+          driver-class-name: com.mysql.jdbc.Driver
+          url: jdbc:mysql://127.0.0.1:3306/lottery?useUnicode=true
+          username: root
+          password: By071088..
+        db01:
+          driver-class-name: com.mysql.jdbc.Driver
+          url: jdbc:mysql://127.0.0.1:3306/lottery?useUnicode=true
+          username: root
+          password: By071088..
+        db02:
+          driver-class-name: com.mysql.jdbc.Driver
+          url: jdbc:mysql://127.0.0.1:3306/lottery?useUnicode=true
+          username: root
+          password: By071088..
+```
+最后在需要分库分表的dao层中写入注解开启
+```java
+@Mapper
+@DBRouterStrategy(enableSplitTable = true)
+public interface IUserStrategyExportDao {
+
+    /**
+     * 新增数据
+     * @param userStrategyExport 用户策略
+     */
+    @DBRouter(key = "uId")
+    void insert(UserStrategyExport userStrategyExport);
+
+    /**
+     * 查询数据
+     * @param uId 用户ID
+     * @return 用户策略
+     */
+    //没有指定key 就用配置文件中的默认分片键
+    @DBRouter
+    UserStrategyExport queryUserStrategyExportByUId(String uId);
+}
+```
+
+## 实现逻辑剖析
+1. 先使用配置类注入对应的多数据源、分库分表配置，创建一个继承自 `AbstractRoutingDataSource `的子类，并且实现 `determineCurrentLookupKey()` 方法来指定数据源的选择逻辑。然后，将这个数据源路由器配置到 Spring 中，Spring 在执行数据库操作时会根据实际情况动态地选择数据源。
+2. 然后实现一个aop切面，对自定义注解`@DBRouter`进行拦截处理，从自定义注解`@DBRouter`中获取分片键key，然后反射从切点获取args中key对应的value。例如：uId:12345,这个uId就是DBRouter里的key，12345就是从切点args里传入的value。然后调用分片策略`IDBRouterStrategy`进行分库分表计算并存入ThreadLocal中，供给Mybatis自定义拦截器插件以及步骤1的动态数据源选择使用
+3. mybatis自定义拦截器插件中通过statementHandleer获取对应的执行mapper以及执行方法。再判断该mapper是否有开启分库分表策略，有的话就从步骤2的ThreadLocal中获取分表键，至于分库在步骤1的spring配置中会自动切换。

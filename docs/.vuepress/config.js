@@ -25,7 +25,7 @@ module.exports = {
                 ]
             }
         ],
-        sidebarDepth: 2,
+        sidebarDepth: 3,
         search: true,
         searchMaxSuggestions: 10,
         displayAllHeaders: false,
@@ -65,7 +65,8 @@ module.exports = {
                         title:"Java多线程",
                         collapsable: true,
                         children: [
-                            {title:'Thread',path: '/java/thread',sidebarDepth: 4}
+                            {title:'Thread',path: '/java/thread'},
+                            {title:'ThreadPoolExecutor',path: '/java/ThreadPoolExecutor'},
                         ]
                     }
                 ],

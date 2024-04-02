@@ -855,3 +855,9 @@ JVMTI：JVMTI(JVM Tool Interface)位于jpda最底层，是Java虚拟机所提供
 
 基于jvmti提供的接口服务，运用C++代码(win32-add_library)在Agent_OnLoad里开发监控服务，并生成dll文件。开发完成后在java代码中加入agentpath，这样就可以监控到我们需要的信息内容。
 [这个太高级了，暂时没学明白，详情点此看](http://s.xiaoyuan.space/30yVRl)
+
+---
+#### 基于中间件的监控
+马哥的hippo4j 开源组件，可以用于学习
+● GitHub：https://github.com/opengoofy/hippo4j
+● Gitee：https://gitee.com/opengoofy/hippo4j

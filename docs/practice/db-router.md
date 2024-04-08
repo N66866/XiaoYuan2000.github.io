@@ -679,17 +679,17 @@ mini-db-router:
           driver-class-name: com.mysql.jdbc.Driver
           url: jdbc:mysql://127.0.0.1:3306/lottery?useUnicode=true
           username: root
-          password: By071088..
+          password: password
         db01:
           driver-class-name: com.mysql.jdbc.Driver
           url: jdbc:mysql://127.0.0.1:3306/lottery?useUnicode=true
           username: root
-          password: By071088..
+          password: password
         db02:
           driver-class-name: com.mysql.jdbc.Driver
           url: jdbc:mysql://127.0.0.1:3306/lottery?useUnicode=true
           username: root
-          password: By071088..
+          password: password
 ```
 最后在需要分库分表的dao层中写入注解开启
 ```java

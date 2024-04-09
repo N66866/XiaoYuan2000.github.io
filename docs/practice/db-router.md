@@ -3,8 +3,8 @@
 最近写代码时遇到需要用到分库分表的场景，但是引入shardingsphere的话太重了，老板不允许，打算自己写一个轻量级的分库分表组件。
 
 [gitee开源](https://gitee.com/xiaoyuan2000/n-db-router-spring-boot-starter)
-
-## pom文件
+## 实现步骤
+### pom文件
 因为要用到mybatis与SpringBoot，所以导入相关依赖
 ```xml
 <parent>
@@ -141,16 +141,16 @@
   </build>
 ```
 
-## 自定义注解
+### 自定义注解
 
 路由注解、支持注解自定义分片键
-### 元注解Retention
+#### 元注解Retention
 **如果运行时没有被@Retention(RetentionPolicy.RUNTIME)元注解修饰，那么它在运行时将不可用。这意味着你将无法通过反射来获取或操作这个注解。**
 > Java中的@Retention注解用于指定注解的保留策略，它有三个可选的保留策略：RetentionPolicy.SOURCE、RetentionPolicy.CLASS和RetentionPolicy.RUNTIME。其中，RetentionPolicy.RUNTIME表示注解将在运行时保留，并可以通过反射来访问和处理。
 如果一个注解没有显式地使用@Retention注解，并且在运行时没有默认的保留策略为RetentionPolicy.RUNTIME，则它的保留策略将是默认的RetentionPolicy.CLASS，这意味着它将在编译时被保留在编译后的字节码文件中，但在运行时将不可用。
 因此，如果你希望在运行时通过反射来获取和处理注解，你需要确保注解被@Retention(RetentionPolicy.RUNTIME)元注解修饰，否则它将无法在运行时使用。  
 
-### 代码实现
+#### 代码实现
 ```java
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE, ElementType.METHOD})
@@ -169,7 +169,7 @@ public @interface DBRouterStrategy {
 }
 ```
 
-## 动态数据源配置  
+### 动态数据源配置  
 AbstractRoutingDataSource 是 Spring 中的一个抽象类，它是一个数据源路由抽象类，通常用于实现动态数据源切换或多数据源的场景。具体来说，它允许应用程序根据一些条件（例如线程绑定的数据源标识、请求参数、用户信息等）来动态地选择使用哪个数据源。
 
 该类提供了一个抽象方法 determineCurrentLookupKey()，该方法需要被子类实现。子类需要根据具体的业务逻辑来决定当前应该使用的数据源的标识，比如数据源的名称或者其他标识符。AbstractRoutingDataSource 会根据 determineCurrentLookupKey() 返回的值来选择对应的数据源进行操作。
@@ -188,15 +188,15 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
 }
 ```
 
-## 组件配置类
-### 需要注意的小坑与基础
+### 组件配置类
+#### 需要注意的小坑与基础
 * 如果需要编写yml时有提示，只能有一个构造函数，多一个就不出现提示。
 * 在使用SpringBoot编写组件jar包时，因为没有使用`SpringBootApplication`注解，要使用`@ComponentScan`来配置扫描路径，用于扫描@Component注解
 	* 因为`@SpringBootApplication`注解中包含了@ComponentScan
 * 在自动注入属性时，`private Map<String, DBRouterConfigDetail> datasourceMap;` 注入失败，研究了很久发现是`DBRouterConfigDetail`没有写无参构造函数，因为属性注入会调用无参构造函数+setter方法注入属性。没有无参构造就无法构造又不报错，只会注入失败。导致属性为null
 	* @ConfigurationProperties 注解通常会使用无参构造函数来创建对象，并通过 setter 方法来注入属性值。
 
-### 代码实现
+#### 代码实现
 ```java
 @Component()
 @ConfigurationProperties(prefix = "mini-db-router.jdbc.datasource")
@@ -305,7 +305,7 @@ public class DBContextHolder {
 }
 ```
 
-## 路由分库分表策略
+### 路由分库分表策略
 定义策略接口
 ```java
 public interface IDBRouterStrategy {
@@ -412,7 +412,7 @@ public class DBRouterStrategyHashCode implements IDBRouterStrategy {
 ```
 如果需要其他分库分表策略则新建一个策略实现接口即可。
 
-## mybatis自定义拦截器
+### mybatis自定义拦截器
 用于拦截修改sql，注释已经写好
 ```java
 //@Intercepts({@Signature(type = StatementHandler.class, method = "prepare", args = {Connection.class, Integer.class})})
@@ -471,7 +471,7 @@ public class DynamicMybatisPlugin implements Interceptor {
 ```
 
 
-## 自动装配数据源
+### 自动装配数据源
 ```java
 @Configuration
 @ComponentScan(basePackages = "space.xiaoyuan.middleware.db.router")
@@ -540,7 +540,7 @@ public class DataSourceAutoConfig{
 }
 ```
 
-## aop切面
+### aop切面
 ```java
 @Aspect
 public class DBRouterJoinPoint {
@@ -653,10 +653,10 @@ public class DBRouterJoinPoint {
 }
 ```
 
-## 自动装配
+### 自动装配
 在resources/META-INF目录下创建spring.factories并写入`org.springframework.boot.autoconfigure.EnableAutoConfiguration=space.xiaoyuan.middleware.db.router.config.DataSourceAutoConfig` 即可自动装配DataSourceAutoConfig
 
-## 使用方式
+### 使用方式
 在需要使用该分库分表组件的pom文件中引入依赖
 ```xml
 <dependency>
@@ -715,20 +715,22 @@ public interface IUserStrategyExportDao {
 }
 ```
 
-## 实现逻辑剖析
+### 实现逻辑剖析
 1. 先使用配置类注入对应的多数据源、分库分表配置，创建一个继承自 `AbstractRoutingDataSource `的子类，并且实现 `determineCurrentLookupKey()` 方法来指定数据源的选择逻辑。然后，将这个数据源路由器配置到 Spring 中，Spring 在执行数据库操作时会根据实际情况动态地选择数据源。
 2. 然后实现一个aop切面，对自定义注解`@DBRouter`进行拦截处理，从自定义注解`@DBRouter`中获取分片键key，然后反射从切点获取args中key对应的value。例如：uId:12345,这个uId就是DBRouter里的key，12345就是从切点args里传入的value。然后调用分片策略`IDBRouterStrategy`进行分库分表计算并存入ThreadLocal中，供给Mybatis自定义拦截器插件以及步骤1的动态数据源选择使用
-3. mybatis自定义拦截器插件中通过statementHandleer获取对应的执行mapper以及执行方法。再判断该mapper是否有开启分库分表策略，有的话就从步骤2的ThreadLocal中获取分表键，至于分库在步骤1的spring配置中会自动切换。
+3. mybatis自定义拦截器插件中通过statementHandleer获取对应的执行mapper以及执行方法。再判断该mapper是否有开启分库分表策略，有的话就从步骤2的ThreadLocal中获取分表键，至于分库在步骤1的spring配置中会自动切换。  
 ![pic](/practice/db-router/Fm85ZCdK6YBuTtBgBglPC5EME4Vo.png)
 
-## 为什么要自研？
+---
+## 项目介绍
+### 为什么要自研？
 1. 维护性:市面的路由组件比如 `shardingsphere` 但过于庞大，还需要随着版本做一些升级。而我们需要更少的维护成本。
 2. 扩展性:结合自身的业务需求，我们的路由组件可以分库分表、自定义路由协议，扫描指定库表数据等各类方式。研发扩展性好，简单易用。
 3. 安全性:自研的组件更好的控制了安全问题，不会因为一些额外引入的jar包，造成安全风险。
 
 当然，我们的组件主要是为了更好的适应目前系统的诉求，所以使用自研的方式处理。就像shardingsphere 的市场占有率也不是 100% 那么肯定还有很多公司在自研，甚至各个大厂也都自研一整套分布式服务，来让自己的系统更稳定的运行。分库分表基本是单表200万，才分。
 
-## 组件介绍
+### 组件介绍
 - **项目名称**：DB-Router 数据库路由组件
 - **系统架构**：基于 AOP、Spring 动态数据源切换、MyBatis 插件开发、散列算法等技术，实现的 SpringBoot Starter 数据库路由组件
 - **核心技术**：AOP、AbstractRoutingDataSource、MyBatis Plugin StatementHandler、扰动函数、哈希散列、ThreadLocal
@@ -738,7 +740,34 @@ public interface IUserStrategyExportDao {
   <!-- - 调研平方散列、除法散了、乘法散列、哈希散列以及斐波那契散列，并结合雪崩测试，选择了一块适合数据库路由的散列算法，并做功能的开发实现。 -->
   - 引入 MyBatis Plugin 插件开发功能，对执行的 SQL 语句动态变更表信息，做到执行对应表的策略设计。同时扩展了监控和日志功能，方便在调试和验证时，可以打印相关SQL语句。
 
-
+---
+## 使用事项
+### 声明式事务失效问题
+* 场景介绍
+    * AbstractRoutingDataSource有3个数据源:db00,db01,db02。是否存在一种情况，@Transactional开启事务时会在默认数据源db00开启，然后我执行sql时切换数据源为db01,这个时候@Transactional的事务就失效了吗？
+* 场景回答
+    * 如果在@Transactional注解标记的方法内部切换了数据源，@Transactional的事务管理可能会失效。在您描述的情况下，如果@Transactional开启事务时使用的是默认数据源db00，而后在方法内部手动切换数据源到db01，那么@Transactional所管理的事务可能会失效。
+    * 这是因为@Transactional注解通常会在方法开始时开启事务，并将事务绑定到当前线程中的事务上下文中，同时使用默认的数据源。当切换数据源时，可能会导致事务管理的混乱，因为事务管理器与新的数据源不一致。
+    * 因此，在使用AbstractRoutingDataSource和@Transactional一起时，需要确保在一个事务中始终使用一致的数据源，并避免在事务内部切换数据源，以保证事务管理的正确性和可靠性。
+* **组件使用建议**
+    * 使用编程式事务：  
+    ```java
+    //注入bean 可以用构造器注入，这里节选代码就用@Resource了，先根据名字注入再根据类型
+    @Resource
+    private TransactionTemplate transactionTemplate;
+    @Resource
+    private IDBRouterStrategy dbRouter;
+    //进行路由
+    dbRouter.doRouter(partake.getuId());
+    //执行事务
+    transactionTemplate.execute(status -> {
+        //回滚事务
+        status.setRollbackOnly();
+        //如果不手动回滚/抛出异常则会自动提交事务
+        //可以return 自定义返回值
+        return new Object();
+    });
+    ```
 <!-- ## 组件技术问题
 简单技术问题：
 

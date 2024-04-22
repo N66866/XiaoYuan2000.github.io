@@ -18,7 +18,7 @@
 ![pic](/cannot-understand/xface-01.png)
 ![pic](/cannot-understand/xface-02.png)
 猜测是这边网络DHCP环境与设备不兼容
-抓包发现DHCP续期请求网关全部都是拒绝NAK，而设备被拒绝2次后就会释放IP，而局域网内其他设备是一起发，发到同意为止。
+抓包发现DHCP续期请求网关全部都是拒绝NAK，而设备被拒绝2次后就会释放IP，而局域网内其他设备是一直发，发到同意为止。
 
 ---
 ### 模拟DHCP过程

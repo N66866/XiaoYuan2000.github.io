@@ -97,6 +97,15 @@ module.exports = {
                             {title:'使用SpringUtil时发生的小问题',path:'/cannot-understand/springutil'}
                         ]
                     }
+                ],
+                '/spring':[
+                    {
+                        title: 'Spring',
+                        children: [
+                            '/spring/Spring-registerBean',
+                            '/spring/beanFactory&factoryBean'
+                        ]
+                    }
                 ]
             }
     },

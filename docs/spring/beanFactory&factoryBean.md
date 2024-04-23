@@ -261,6 +261,6 @@ BeanFactory 是 Spring 容器的顶级接口，它表示 Spring 框架中用于�
 
 FactoryBean 也是 Spring 提供的接口，实现了这个接口的 Bean 会被用于创建某种特定类型的对象。
 它被广泛用于创建一些：
-* 无法通过正常的构造函数创建的对象：比较典型的是各种代理，比如 Dubbo 使用 ReferenceBean 创建 RPC 接口的代理对象，Mybatis 使用 MapperFactoryBean 来创建 Mapper 接口代理。
+* 无法通过正常的构造函数创建的对象：比较典型的是各种代理，比如 Dubbo 使用 `ReferenceBean` 创建 RPC 接口的代理对象，Mybatis 使用 `MapperFactoryBean` 来创建 Mapper 接口代理。
 * 创建过程比较复杂的对象：比较典型的是 SqlSession， 比如 JPA 和 Myabtis 都选择通过一个 SqlSessionFactoryBean 来创建它。
 某种程度上来说，它和 BeanFactory 都能用于创建对象，不过它在使用上会更灵活一些。

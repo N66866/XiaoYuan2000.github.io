@@ -104,7 +104,8 @@ module.exports = {
                         title: 'Spring',
                         children: [
                             '/spring/Spring-registerBean',
-                            '/spring/beanFactory&factoryBean'
+                            '/spring/beanFactory&factoryBean',
+                            '/spring/spring-start',
                         ]
                     }
                 ],
@@ -112,8 +113,7 @@ module.exports = {
                     {
                         title: '中间件',
                         children: [
-                            '/middleware/spring-kafka',
-                            '/spring/beanFactory&factoryBean'
+                            '/middleware/spring-kafka'
                         ]
                     }
                 ]

@@ -106,6 +106,15 @@ module.exports = {
                             '/spring/beanFactory&factoryBean'
                         ]
                     }
+                ],
+                '/middleware':[
+                    {
+                        title: '中间件',
+                        children: [
+                            '/middleware/spring-kafka',
+                            '/spring/beanFactory&factoryBean'
+                        ]
+                    }
                 ]
             }
     },

@@ -15,6 +15,7 @@ module.exports = {
                     {text: "git", link: "/git/"},
                     {text: "技术实践", link: "/practice/"},
                     {text: "奇难杂症", link: "/cannot-understand/"},
+                    {text: "中间件学习", link: "/middleware/"}
                 ]
             }, // 内部链接 以docs为根目录
             // 下拉列表

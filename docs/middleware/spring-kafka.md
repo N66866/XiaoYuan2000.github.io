@@ -21,7 +21,9 @@
 4. 消息
 	* 向 "Hello-Kafka" 发送消息： `bin/kafka-console-producer.sh --broker-list localhost:9092 --topic Hello-Kafka`
 	* 监听 "Hello-Kafka" 消息： `bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic Hello-Kafka --from-beginning`
-  
+
+**注意，需要先启动zookeeper过三五秒再启动kafka，不然kafka会启动失败报错**  
+
 ### 非本机访问配置
 如果需要其他机器访问安装的kafka，则需要修改配置
 ```

@@ -87,6 +87,7 @@ module.exports = {
                         children: [
                             {title:'CI/CD',path:'/practice/CI CD'},
                             {title:'Spring中间件开发-分库分表',path:'/practice/db-router'},
+                            {title:'Springboot内嵌artemis MQ',path:'/practice/spring-embedded-artemis'},
                         ]
                     }
                 ],

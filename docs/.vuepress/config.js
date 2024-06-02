@@ -96,7 +96,10 @@ module.exports = {
                     {
                         title: 'JAVA/Spring奇难杂症',
                         children: [
-                            {title:'使用SpringUtil时发生的小问题',path:'/cannot-understand/springutil'}
+                            {title:'使用SpringUtil时发生的小问题',path:'/cannot-understand/springutil'},
+                            {title:'shardingsphere读取配置问题',path:'/cannot-understand/shardingsphere'},
+                            {title:'xface600产品掉线问题',path:'/cannot-understand/xface'},
+                            {title:'cloudflare泛播问题',path:'/cannot-understand/cloudflare'},
                         ]
                     }
                 ],

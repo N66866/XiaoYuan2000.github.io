@@ -94,7 +94,7 @@ module.exports = {
                 '/cannot-understand/': [
                     // '/git/',
                     {
-                        title: 'JAVA/Spring奇难杂症',
+                        title: '奇难杂症',
                         children: [
                             {title:'使用SpringUtil时发生的小问题',path:'/cannot-understand/springutil'},
                             {title:'shardingsphere读取配置问题',path:'/cannot-understand/shardingsphere'},
@@ -115,9 +115,16 @@ module.exports = {
                 ],
                 '/middleware':[
                     {
-                        title: '中间件',
+                        title: 'spring+中间件',
                         children: [
-                            '/middleware/spring-kafka'
+                            '/middleware/spring-kafka',
+                            '/middleware/xxl-job'
+                        ]
+                    },
+                    {
+                        title: '系统中间件',
+                        children: [
+                            '/middleware/docker'
                         ]
                     }
                 ]

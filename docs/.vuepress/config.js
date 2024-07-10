@@ -124,7 +124,8 @@ module.exports = {
                     {
                         title: '系统中间件',
                         children: [
-                            '/middleware/docker'
+                            '/middleware/docker',
+                            '/middleware/kafka',
                         ]
                     }
                 ]

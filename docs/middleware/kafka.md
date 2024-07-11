@@ -100,6 +100,11 @@ docker run --volume /opt/kafka/docker/:/mnt/shared/config -p 9092:9092 apache/ka
 	* 监听"Hello-Kafka" : bin/kafka-console-consumer.sh --topic Hello-Kafka --bootstrap-server localhost:9092 --from-beginning #从头开始读
 ```
 
+### 重置偏移量
+```sh
+	* offset重置到头 bin/kafka-consumer-grous.sh --bootstrap-server 127.0.0.1:9092 --group 消费者组 --topic 主题 --reset-offsets --to-earliest --excute
+	* offset重置到尾 bin/kafka-consumer-grous.sh --bootstrap-server 127.0.0.1:9092 --group 消费者组 --topic 主题 --reset-offsets --to-latest --excute
+```
 
 ## spring继承kafka
 请看本站的另一个spring栏目

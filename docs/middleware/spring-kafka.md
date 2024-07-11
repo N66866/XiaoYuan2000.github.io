@@ -100,7 +100,25 @@ public class KafkaProducer {
     public void send(Object val){
         String jsonString = JSON.toJSONString(val);
         log.info("即将发送消息： {}",jsonString);
+        //使用Message类发送消息
+        Message<Object> build = MessageBuilder.withPayload(val)
+                .setHeader(KafkaHeaders.TOPIC,topic)
+                .build();
+        kafkaTemplate.send(build);
+
+        //使用ProducerRecord 发送消息
+        Headers headers = new RecordHeaders();
+        headers.add("header1","header1".getBytes(StandardCharsets.UTF_8));
+        //String topic, Integer partition, Long timestamp, K key, V value, Iterable<Header> headers
+        ProducerRecord<String,Object> record = new ProducerRecord<>(topic,0,System.currentTimeMillis(),"Key",val,headers);
+
+        //直接发送消息
         ListenableFuture<SendResult<String,Object>> future = kafkaTemplate.send(TOPIC_TEST,val);
+
+        //阻塞获取结果
+        SendResult<String,Object> result = future.get();
+        //非阻塞回调 jdk8 + springboot 2.x 
+        // jdk 17 + springboot3 的返回值是completableFuture 使用 thenAccept thenRun 等添加回调
         future.addCallback(new ListenableFutureCallback<SendResult<String, Object>>() {
             @Override
             public void onFailure(Throwable ex) {

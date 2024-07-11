@@ -106,5 +106,10 @@ docker run --volume /opt/kafka/docker/:/mnt/shared/config -p 9092:9092 apache/ka
 	* offset重置到尾 bin/kafka-consumer-grous.sh --bootstrap-server 127.0.0.1:9092 --group 消费者组 --topic 主题 --reset-offsets --to-latest --excute
 ```
 
-## spring继承kafka
+## spring集成kafka
 请看本站的另一个spring栏目
+
+## kafka 概念
+### 副本Replica
+
+###

@@ -111,5 +111,10 @@ docker run --volume /opt/kafka/docker/:/mnt/shared/config -p 9092:9092 apache/ka
 
 ## kafka 概念
 ### 副本Replica
+在创建主题时，**`--replication-factor` 就是指定副本数量 最小为1 最大不超过节点数量**  
+只有一个副本时，就只有主副本即主节点。 多个副本时，读写也是操作主节点，从副本（从节点）只用于备份主节点数据。  
+当主节点挂掉时，从节点顶上成为主节点。
+```sh
+	* 新建一个名为"Hello-Kafka"的主题： `bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic Hello-Kafka`
+```
 
-###

@@ -1,4 +1,4 @@
-# kafka
+# spring-kafka
 ## 服务器安装
 ### 下载
 官网下载：https://kafka.apache.org/downloads  
@@ -36,15 +36,14 @@ listeners=PLAINTEXT://0.0.0.0:9092
 advertised.listeners=PLAINTEXT://安装的机器ip:9092
 ```
 
-## spring-kafka
-### 依赖
+## 依赖
 ```xml
 <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
 </dependency>
 ```
-### 配置文件
+## 配置文件
 ```yaml
 spring:
   kafka:
@@ -81,13 +80,13 @@ spring:
     listener:
       # 在侦听器容器中运行的线程数。
       concurrency: 5
-      #listner负责ack，每调用一次，就立即commit
+      #listner负责手动ack，每调用一次，就立即commit
       ack-mode: manual_immediate
       missing-topics-fatal: false
 ```
 
-### 使用方式
-生产者：
+## 收发消息
+### 生产者
 ```java
 @Slf4j
 @Component
@@ -135,15 +134,32 @@ public class KafkaProducer {
 }
 ```
 
-消费者：
+### 消费者
+
+注意：如果要接受对象需要配置序列化，我选择用JSON
 ```java
 @Component
 @Slf4j
 public class KafkaConsumer {
-
-    @KafkaListener(topics = KafkaProducer.TOPIC_TEST,groupId = KafkaProducer.TOPIC_GROUP)
+    /**
+     * 常见注解
+     * @Payload 接受消息体
+     * @Header 接受消息头 （KafkaHeaders 选字段接受，没有指定头会抛异常）
+     * */
+    @KafkaListener(topics = KafkaProducer.TOPIC_TEST,groupId = KafkaProducer.TOPIC_GROUP) //@Header 读取消息头
     public void topicTest(ConsumerRecord<?, ?> record, Acknowledgment ack, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic){
         Optional<?> message = Optional.ofNullable(record.value());
+        if (message.isPresent()) {
+            Object msg = message.get();
+            log.info("topic_test 消费了： Topic:" + topic + ",Message:" + msg);
+            //确认提交，消息偏移量会更新。不确认的话消息可以被重复消费
+            ack.acknowledge();
+        }
+    }
+
+    @KafkaListener(topics = KafkaProducer.TOPIC_TEST,groupId = KafkaProducer.TOPIC_GROUP)                           //@Payload 接受消息体
+    public void topicTest1(ConsumerRecord<?, ?> record, Acknowledgment ack, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,@Payload Object data){
+        Optional<?> message = Optional.ofNullable(data);
         if (message.isPresent()) {
             Object msg = message.get();
             log.info("topic_test 消费了： Topic:" + topic + ",Message:" + msg);
@@ -152,3 +168,275 @@ public class KafkaConsumer {
     }
 }
 ```
+
+
+## 创建主题指定分区和副本
+### 默认行为
+自动创建主题（如果启用）：
+Kafka 服务器端配置项 auto.create.topics.enable 控制是否允许 Kafka 自动创建不存在的主题。默认情况下，这个配置是启用的。
+如果 auto.create.topics.enable=true，当你发送消息到一个不存在的主题时，Kafka 会自动创建这个主题，并使用默认的分区和副本配置。  
+默认下kafka的配置文件`server.properties`分区和副本配置都是1  
+
+抛出异常（如果禁用自动创建）：
+如果 auto.create.topics.enable=false，当你尝试发送消息到一个不存在的主题时，Kafka 不会自动创建主题。相反，Kafka 客户端会抛出异常，例如 UnknownTopicOrPartitionException。
+
+### 创建指定参数
+```java
+@Configuration
+public class KafkaConfig {
+    
+    //如果主题已存在且参数相同，则不会重复创建
+    //如果主题已存在且参数不同且分区数变大，则会修改分区数（分区数只能放大不能缩小）
+    @Bean
+    public NewTopic newTopic(){
+        //topic 名字 、分区数、副本数
+        return new NewTopic("kafka-topic", 2, (short) 1);
+        //或者建造者模式
+        return TopicBuilder.name("myTopic")
+                       .partitions(10)
+                       .replicas(1)
+                       .build();
+    } 
+}
+```
+
+## 消息发送策略  
+**指定分区就会发送到指定分区中**
+```java
+//KafkaProducer.java中
+private int partition(ProducerRecord<K, V> record, byte[] serializedKey, byte[] serializedValue, Cluster cluster) {
+        if (record.partition() != null) {
+            return record.partition();
+        } else if (this.partitioner != null) {
+            int customPartition = this.partitioner.partition(record.topic(), record.key(), serializedKey, record.value(), serializedValue, cluster);
+            if (customPartition < 0) {
+                throw new IllegalArgumentException(String.format("The partitioner generated an invalid partition number: %d. Partition number should always be non-negative.", customPartition));
+            } else {
+                return customPartition;
+            }
+        } else {
+            return serializedKey != null && !this.partitionerIgnoreKeys ? BuiltInPartitioner.partitionForKey(serializedKey, cluster.partitionsForTopic(record.topic()).size()) : -1;
+        }
+    }
+``` 
+
+### 默认分配策略
+
+消息携带了key 就使用这个策略
+```java
+//调用这个代码
+BuiltInPartitioner.partitionForKey(serializedKey, cluster.partitionsForTopic(record.topic()).size());
+ 
+public static int partitionForKey(byte[] serializedKey, int numPartitions) {
+        return Utils.toPositive(Utils.murmur2(serializedKey)) % numPartitions;
+}
+```
+消息没携带key 会使用随机分配
+```java
+    KafkaProducer.partition()方法会返回 -1
+    //BuiltInPartitioner.java
+    private int nextPartition(Cluster cluster) {
+        int random = mockRandom != null ? (Integer)mockRandom.get() : Utils.toPositive(ThreadLocalRandom.current().nextInt());
+        PartitionLoadStats partitionLoadStats = this.partitionLoadStats;
+        int partition;
+        if (partitionLoadStats == null) {
+            List<PartitionInfo> availablePartitions = cluster.availablePartitionsForTopic(this.topic);
+            if (availablePartitions.size() > 0) {
+                //随机取分区
+                partition = ((PartitionInfo)availablePartitions.get(random % availablePartitions.size())).partition();
+            } else {
+                List<PartitionInfo> partitions = cluster.partitionsForTopic(this.topic);
+                partition = random % partitions.size();
+            }
+        } else {
+            assert partitionLoadStats.length > 0;
+
+            int[] cumulativeFrequencyTable = partitionLoadStats.cumulativeFrequencyTable;
+            int weightedRandom = random % cumulativeFrequencyTable[partitionLoadStats.length - 1];
+            int searchResult = Arrays.binarySearch(cumulativeFrequencyTable, 0, partitionLoadStats.length, weightedRandom);
+            int partitionIndex = Math.abs(searchResult + 1);
+
+            assert partitionIndex < partitionLoadStats.length;
+
+            partition = partitionLoadStats.partitionIds[partitionIndex];
+        }
+
+        this.log.trace("Switching to partition {} in topic {}", partition, this.topic);
+        return partition;
+    }
+```
+### 轮询分配策略
+```yaml
+spring:
+  kafka:
+    bootstrap-servers: 
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.ToStringSerializer
+```
+```java
+//full 模式，调用方法会从spring容器中获取单例bean
+@Configuration
+public class KafkaConfig {
+    
+    @Value("${spring.kafka.bootstrap-servers}")
+    private String bootstrapServers;
+    @Value("${spring.kafka.producer.value-serializer}")
+    private String valueSerializer;
+
+
+    @Bean
+    public KafkaTemplate<String, ?> kafkaTemplate(){
+        return new KafkaTemplate<>(producerFactory());
+    }
+    @Bean
+    public ProducerFactory<String, ?> producerFactory(){
+        return new DefaultKafkaProducerFactory<>(config());
+    }
+
+    public Map<String,Object> config(){
+        Map<String, Object> props = new HashMap<>();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, valueSerializer);
+        //使用轮询分配策略
+        props.put(ProducerConfig.PARTITIONER_CLASS_CONFIG, RoundRobinPartitioner.class);
+        return props;
+    }
+}
+```
+
+### 自定义分配策略
+新建自定义策略类 实现Partitoner接口
+```java
+public class CustomerPartitioner implements Partitioner {
+
+    private final Map<String,AtomicInteger> counterMap = new ConcurrentHashMap<>();
+    
+    //发一次消息如果abortForNewBatch == ture 会触发两次partition 所以这个轮询逻辑会隔一个序号
+    @Override
+    public int partition(String topic, Object key, byte[] keyBytes, Object value, byte[] valueBytes, Cluster cluster) {
+        List<PartitionInfo> partitionInfos = cluster.partitionsForTopic(topic);
+        var counter = counterMap.computeIfAbsent(topic, k -> new AtomicInteger());
+        int numPartitions = partitionInfos.size();
+        if(key == null){
+            int next = counter.getAndIncrement();
+            if(next >= numPartitions){
+                counter.compareAndSet(numPartitions,0);
+            }
+            return next;
+        }else{
+            return Utils.toPositive(Utils.murmur2(keyBytes)) % numPartitions;
+        }
+    }
+
+    @Override
+    public void close() {
+
+    }
+
+    @Override
+    public void configure(Map<String, ?> map) {
+
+    }
+}
+```
+在配置类中指定策略类
+```java
+//full 模式，调用方法会从spring容器中获取单例bean
+@Configuration
+public class KafkaConfig {
+    
+    @Value("${spring.kafka.bootstrap-servers}")
+    private String bootstrapServers;
+    @Value("${spring.kafka.producer.value-serializer}")
+    private String valueSerializer;
+
+
+    @Bean
+    public KafkaTemplate<String, ?> kafkaTemplate(){
+        return new KafkaTemplate<>(producerFactory());
+    }
+    @Bean
+    public ProducerFactory<String, ?> producerFactory(){
+        return new DefaultKafkaProducerFactory<>(config());
+    }
+
+    public Map<String,Object> config(){
+        Map<String, Object> props = new HashMap<>();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, valueSerializer);
+        //使用自定义分配策略
+        props.put(ProducerConfig.PARTITIONER_CLASS_CONFIG, CustomerPartitioner.class);
+        return props;
+    }
+}
+```
+
+## 生产者发送消息流程
+
+**KafkaProducer -> 拦截器ProducerInterceptors -> 序列化器Serializer -> 分区器Partitioner**
+
+### 拦截器
+```java
+//实现ProducerInterceptor
+public class CustomerProducerInterceptor implements ProducerInterceptor<String,Object> {
+    @Override
+    public ProducerRecord<String, Object> onSend(ProducerRecord<String, Object> producerRecord) {
+        System.out.println("拦截消息："+producerRecord);
+        return producerRecord;
+    }
+
+    @Override
+    public void onAcknowledgement(RecordMetadata recordMetadata, Exception e) {
+        if(recordMetadata != null)
+            System.out.println("Kafka服务已确认：" + recordMetadata);
+        else
+            System.out.println("消息发送失败："+e.getMessage());
+    }
+
+    @Override
+    public void close() {
+
+    }
+
+    @Override
+    public void configure(Map<String, ?> map) {
+
+    }
+}
+```  
+指定拦截器
+```java
+//full 模式，调用方法会从spring容器中获取单例bean
+@Configuration
+public class KafkaConfig {
+    
+    @Value("${spring.kafka.bootstrap-servers}")
+    private String bootstrapServers;
+    @Value("${spring.kafka.producer.value-serializer}")
+    private String valueSerializer;
+
+
+    @Bean
+    public KafkaTemplate<String, ?> kafkaTemplate(){
+        return new KafkaTemplate<>(producerFactory());
+    }
+    @Bean
+    public ProducerFactory<String, ?> producerFactory(){
+        return new DefaultKafkaProducerFactory<>(config());
+    }
+
+    public Map<String,Object> config(){
+        Map<String, Object> props = new HashMap<>();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, valueSerializer);
+        //使用自定义分配策略
+        props.put(ProducerConfig.PARTITIONER_CLASS_CONFIG, CustomerPartitioner.class);
+        //使用自定义拦截器
+        props.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG,CustomerProducerInterceptor.class.getName());
+        return props;
+    }
+}
+```
+
+## 消费者消费消息流程

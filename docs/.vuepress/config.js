@@ -115,7 +115,7 @@ module.exports = {
                 ],
                 '/middleware':[
                     {
-                        title: 'spring+中间件',
+                        title: 'spring集成中间件',
                         children: [
                             '/middleware/spring-kafka',
                             '/middleware/xxl-job'

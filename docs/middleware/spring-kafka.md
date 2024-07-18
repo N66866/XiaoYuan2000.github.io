@@ -134,9 +134,29 @@ public class KafkaProducer {
 }
 ```
 
-### 消费者
+### 消费者  
+如果消费者组已经读过主题的消息，需要从头开始读的话，需要重置消费组偏移量或者更换消费者组的id，见：[kafka重置偏移量](./kafka.html#重置偏移量)
+
+```java
+/**
+ * @KafkaListener注解下属性
+ * groupId // 消费组id
+ * topics // 主题
+ * topicPartitions = { //监听主题分区
+ *      @TopicPartitions(
+ *          topic = xxx 主题
+ *          partitions = {"1","2","0"} // 监听主题的分区号
+ *          partitionOffset = {
+ *              @PartitionOffset(partition = "3" , initialOffset = "3") // 监听分区号3 初始偏移量为 3
+ *              @PartitionOffset(xxxxx)
+ *          }
+ *      )
+ * }
+ * */
+```  
 
 注意：如果要接受对象需要配置序列化，我选择用JSON
+
 ```java
 @Component
 @Slf4j
@@ -169,6 +189,22 @@ public class KafkaConsumer {
 }
 ```
 
+### 批量消费
+```yaml
+spring:
+  kafka:
+    consumer:
+      fetch-max-wait: 500 # 如果不够10条消息就等500ms
+      max-poll-records: : 10 # 每次拉十条
+    listener: 
+        type: batch # 批量消费
+```
+```java
+    @KafkaListener(topics = KafkaProducer.TOPIC_TEST,groupId = KafkaProducer.TOPIC_GROUP) //@Header 读取消息头
+    public void topicTest(List<ConsumerRecord<?, ?>> record, Acknowledgment ack, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic){
+       
+    }
+```
 
 ## 创建主题指定分区和副本
 ### 默认行为
@@ -200,7 +236,7 @@ public class KafkaConfig {
 }
 ```
 
-## 消息发送策略  
+## 消息发送分区策略  
 **指定分区就会发送到指定分区中**
 ```java
 //KafkaProducer.java中

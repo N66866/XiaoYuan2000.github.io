@@ -202,7 +202,13 @@ spring:
 ```java
     @KafkaListener(topics = KafkaProducer.TOPIC_TEST,groupId = KafkaProducer.TOPIC_GROUP) //@Header 读取消息头
     public void topicTest(List<ConsumerRecord<?, ?>> record, Acknowledgment ack, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic){
-       
+        Optional<?> message = Optional.ofNullable(record.value());
+        if (message.isPresent()) {
+            Object msg = message.get();
+            log.info("topic_test 消费了： Topic:" + topic + ",Message:" + msg);
+            //确认提交，消息偏移量会更新。不确认的话消息可以被重复消费
+            ack.acknowledge();
+        }
     }
 ```
 
@@ -408,6 +414,10 @@ public class KafkaConfig {
 }
 ```
 
+## 消息消费分区策略  
+
+
+
 ## 生产者发送消息流程
 
 **KafkaProducer -> 拦截器ProducerInterceptors -> 序列化器Serializer -> 分区器Partitioner**
@@ -476,3 +486,88 @@ public class KafkaConfig {
 ```
 
 ## 消费者消费消息流程
+
+### 拦截器  
+```java
+public class CustomerConsumerInterceptor implements ConsumerInterceptor<String,Object> {
+    //消费消息前触发
+    @Override
+    public ConsumerRecords<String, Object> onConsume(ConsumerRecords<String, Object> consumerRecords) {
+        return null;
+    }
+
+    // 提交offset前触发
+    @Override
+    public void onCommit(Map<TopicPartition, OffsetAndMetadata> map) {
+
+    }
+
+    @Override
+    public void close() {
+
+    }
+
+    @Override
+    public void configure(Map<String, ?> map) {
+
+    }
+}
+```  
+指定拦截器
+```java
+//full 模式，调用方法会从spring容器中获取单例bean
+@Configuration
+public class KafkaConfig {
+
+    @Value("${spring.kafka.bootstrap-servers}")
+    private String bootstrapServers;
+    @Value("${spring.kafka.producer.value-serializer}")
+    private String valueSerializer;
+
+
+    @Bean
+    public KafkaListenerContainerFactory<?> customerKafkaListenerContainerFactory(){
+        ConcurrentKafkaListenerContainerFactory<String,?> concurrentKafkaListenerContainerFactory = new ConcurrentKafkaListenerContainerFactory<>();
+        concurrentKafkaListenerContainerFactory.setConsumerFactory(consumerFactory());
+       return concurrentKafkaListenerContainerFactory;
+    }
+    @Bean
+    public ConsumerFactory<String, Object> consumerFactory(){
+        return new DefaultKafkaConsumerFactory<>(config());
+    }
+
+    public Map<String,Object> config(){
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, valueSerializer);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, valueSerializer);
+        //使用自定义消费者拦截器
+        props.put(ConsumerConfig.INTERCEPTOR_CLASSES_CONFIG, CustomerConsumerInterceptor.class.getName());
+        return props;
+    }
+}
+```
+消费者监听指定容器工厂  
+```java
+@KafkaListener(topics = "test-topic",groupId = "topic-group",containerFactory = "customerKafkaListenerContainerFactory") //指定容器工厂
+    public void topicTest(ConsumerRecord<?, ?> record, Acknowledgment ack
+            , @Header(KafkaHeaders.RECEIVED_TOPIC) String topic){
+        Optional<?> message = Optional.ofNullable(record.value());
+        if (message.isPresent()) {
+            Object msg = message.get();
+            log.info("topic_test 消费了： Topic:" + topic + ",Message:" + msg);
+            //确认提交，消息偏移量会更新。不确认的话消息可以被重复消费
+            ack.acknowledge();
+        }
+    }
+```
+
+### 消费者转发消息
+```java
+    @KafkaListener(topics = "test-topic",groupId = "topic-group",containerFactory = "customerKafkaListenerContainerFactory") //指定容器工厂
+    @SendTo(value="test-topic1")
+    public String topicTest(ConsumerRecord<?, ?> record){
+        //将return的内容转发给 test-topic1
+        return record.value() + "xzxzzx";
+    }
+```

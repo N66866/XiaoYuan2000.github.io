@@ -3,6 +3,19 @@
 ### 官网下载
 官网下载解压即可：https://kafka.apache.org/downloads  
 
+
+### 非本机访问配置
+如果需要其他机器访问安装的kafka，则需要修改配置
+```
+监听端口 允许外部ip访问
+# listeners=PLAINTEXT://:9092
+listeners=PLAINTEXT://0.0.0.0:9092
+
+对外服务ip
+# advertised.listeners=PLAINTEXT://your.host.name:9092
+advertised.listeners=PLAINTEXT://安装的机器ip:9092
+```
+
 ### docker下载
 docker pull apache/kafka:[version] 
 例如：
@@ -117,6 +130,32 @@ docker run --volume /opt/kafka/docker/:/mnt/shared/config -p 9092:9092 apache/ka
 ```sh
 	* 新建一个名为"Hello-Kafka"的主题： `bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic Hello-Kafka`
 ```
+### 多副本架构
+#### 基本概念  
+主题（Topic）：Kafka中的消息是按主题组织的，每个主题可以看作是一类消息的集合。  
+分区（Partition）：每个主题可以分为多个分区，分区是消息存储和读取的基本单位。分区使得消息可以并行处理。  
+副本（Replica）：每个分区可以有多个副本，每个副本存储相同的数据。副本是Kafka高可用性的基础。  
+领导者副本（Leader Replica）：每个分区有一个领导者副本，负责处理所有的读写请求。  
+跟随者副本（Follower Replica）：其他副本称为跟随者副本，它们从领导者副本中复制数据，确保数据的一致性。  
+#### 多副本架构  
+Kafka的多副本架构主要包括以下几个方面：  
+  
+副本分布：每个分区的副本分布在不同的Kafka Broker上，以实现容错和高可用性。如果一个Broker故障，分区的副本仍然可以在其他Broker上访问。  
+  
+数据复制：领导者副本负责处理写入请求，并将数据复制到所有跟随者副本。复制过程是异步的，但可以通过配置确保数据的一致性（如设置acks=all）。  
+  
+故障恢复：当领导者副本失效时，Kafka会自动选举一个新的领导者副本。选举过程确保最小化数据丢失和服务中断。  
+  
+ISR（In-Sync Replicas）：ISR是指与领导者副本保持同步的副本集合。只有在ISR中的副本才能被选举为新的领导者副本，以确保数据的一致性和可靠性。  
+  
+分区和副本管理：Kafka使用ZooKeeper来管理分区的元数据和副本状态。ZooKeeper帮助协调副本的分布和领导者的选举。  
+  
+#### 优势
+高可用性：通过多副本机制，即使某个Broker失效，数据仍然可以通过其他副本访问。
+数据持久性：多副本确保数据不会因单点故障而丢失。
+负载均衡：多个副本可以分散在不同的Broker上，均衡负载，提高整体性能。
+
+
 
 ### kafka事件数据的储存  
 
@@ -192,3 +231,39 @@ offsets.retention.check.interval.ms=600000  # 10 分钟
 
 8. 总结
 `__consumer_offsets` 主题是 Kafka 用于管理消费者组偏移量的核心组件。它确保消费者能够从故障中恢复，并避免数据丢失或重复消费。通过理解其工作机制和配置选项，可以更好地管理和监控 Kafka 消费者组的行为。
+  
+
+## kafka集群搭建
+### zookeeper
+
+#### 配置非本机访问配置
+
+如果需要其他机器访问安装的kafka，则需要修改配置  
+
+```properties
+# The id of the broker. This must be set to a unique integer for each broker.  broker id
+broker.id=1
+
+
+# 监听端口 允许外部ip访问
+# listeners=PLAINTEXT://:9092
+listeners=PLAINTEXT://0.0.0.0:9092
+
+#对外服务ip
+# advertised.listeners=PLAINTEXT://your.host.name:9092
+advertised.listeners=PLAINTEXT://安装的机器ip:9092
+
+#日志文件目录
+log.dirs=/tmp/kafka-logs-01
+```
+
+#### 启动zookeeper
+```sh
+/ 使用zookeeper 启动
+1. zookeeper
+	* 启动： `bin/zookeeper-server-start.sh -daemon config/zookeeper.properties`
+	* 关闭： `bin/zookeeper-server-stop.sh -daemon config/zookeeper.properties`
+2. kafka
+	* 启动： `bin/kafka-server-start.sh -daemon config/server.properties`
+	* 关闭： `bin/kafka-server-stop.sh -daemon config/server.properties`
+```

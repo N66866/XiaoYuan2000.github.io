@@ -475,9 +475,9 @@ RangeAssignor 按照范围（Range）的方式将分区分配给消费者。其�
 
 每个消费者将会得到一个连续的分区范围。假设有 N 个消费者和 P 个分区，RangeAssignor 会尽量平均地将这些分区分配给每个消费者。
 例如，如果一个主题有10个分区（P0-P9），并且有3个消费者（C0, C1, C2），分区分配如下：
-C0: P0, P1, P2, P3
-C1: P4, P5, P6
-C2: P7, P8, P9  
+C0: P0, P1, P2, P3  
+C1: P4, P5, P6  
+C2: P7, P8, P9    
 
 如果有11个分区，就是 4 4 3分配。  
 
@@ -491,9 +491,9 @@ RoundRobinAssignor 使用轮询（Round-Robin）方法分配分区。它确保�
 示例：
 如果有 11 个分区和 3 个消费者，分配结果如下：
 
-C0: P0, P3, P6, P9
-C1: P1, P4, P7, P10
-C2: P2, P5, P8
+C0: P0, P3, P6, P9  
+C1: P1, P4, P7, P10  
+C2: P2, P5, P8  
   
 ### 粘性分区策略 StickyAssignor
 StickyAssignor 的目标是确保每个消费者在重新平衡时尽可能保持其分配的分区不变。它尝试实现分区的“粘性”分配，以减少重新平衡期间的分区移动。
@@ -504,13 +504,13 @@ StickyAssignor 的目标是确保每个消费者在重新平衡时尽可能保�
 示例：
 假设在一次重新平衡之前，消费者的分配如下：
 
-C0: P0, P1, P2
-C1: P3, P4, P5
+C0: P0, P1, P2  
+C1: P3, P4, P5  
 在重新平衡之后，尽量保持分配不变。如果新加入一个消费者 C2：
 
-C0: P0, P1
-C1: P3, P4
-C2: P2, P5
+C0: P0, P1  
+C1: P3, P4  
+C2: P2, P5  
 
 ### 合作粘性分区策略 CooperativeStickyAssignor
 CooperativeStickyAssignor 是 StickyAssignor 的改进版本，旨在减少重新平衡的时间和对系统的影响。它引入了“合作性重新平衡”的概念，使得消费者可以逐步进行重新平衡，而不是一次性重新分配所有分区。
@@ -521,13 +521,13 @@ CooperativeStickyAssignor 是 StickyAssignor 的改进版本，旨在减少重�
 示例：
 在逐步重新平衡期间，分区可能会部分移动：
 
-C0: P0, P1
-C1: P3, P4
-C2: P2, P5
+C0: P0, P1  
+C1: P3, P4  
+C2: P2, P5  
 然后在下一轮逐步调整：
-C0: P0
-C1: P3
-C2: P1, P2, P4, P5
+C0: P0  
+C1: P3  
+C2: P1, P2, P4, P5  
 
 ### 粘性分区的首次分配
 首次分区分配的逻辑
@@ -545,14 +545,14 @@ CooperativeStickyAssignor 与 StickyAssignor 类似，也有自己的首次分�
 StickyAssignor 首次分配
 StickyAssignor 会尽量均衡地分配分区，如下所示：
 
-C0: P0, P1, P2, P3
-C1: P4, P5, P6, P7
+C0: P0, P1, P2, P3  
+C1: P4, P5, P6, P7  
 C2: P8, P9, P10
 CooperativeStickyAssignor 首次分配
 CooperativeStickyAssignor 也会尽量均衡地分配分区，如下所示：
 
-C0: P0, P1, P2, P3
-C1: P4, P5, P6, P7
+C0: P0, P1, P2, P3  
+C1: P4, P5, P6, P7  
 C2: P8, P9, P10
   
 ## 生产者发送消息流程
@@ -706,5 +706,27 @@ public class KafkaConfig {
     public String topicTest(ConsumerRecord<?, ?> record){
         //将return的内容转发给 test-topic1
         return record.value() + "xzxzzx";
+    }
+```
+
+## 连接kafka集群
+**搭建集群请看 [点击这里](kafka.html#kafka集群搭建)**  
+
+### spring配置
+```yaml
+spring:
+  application:
+    name: kafka-application-01
+  kafka:
+    # 逗号分割的list
+    bootstrap-servers: 192.168.72.130:9092,192.168.72.130:9093,192.168.72.130:9094
+```
+
+```java
+//启动时创建主题
+ @Bean
+    public NewTopic newTopic(){
+        //3个分区 3个副本
+        return new NewTopic("cluster-topic",3,(short)3);
     }
 ```

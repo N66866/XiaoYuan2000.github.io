@@ -415,9 +415,146 @@ public class KafkaConfig {
 ```
 
 ## 消息消费分区策略  
+### 配置
+```java
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.RoundRobinAssignor;
+import org.apache.kafka.clients.consumer.StickyAssignor;
+import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.kafka.annotation.EnableKafka;
+import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
+import org.springframework.kafka.core.ConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@EnableKafka
+public class KafkaConsumerConfig {
+
+    @Bean
+    public ConsumerFactory<String, String> consumerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "group_id");
+        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+        props.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, RoundRobinAssignor.class.getName()); //分区策略名
+        // 或者
+        // props.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, StickyAssignor.class.getName());
+        // 或者
+        // props.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, CooperativeStickyAssignor.class.getName());
+
+        return new DefaultKafkaConsumerFactory<>(props);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory());
+        return factory;
+    }
+}
+
+```  
+```java
+                                                                                         //启动3个消费者   指定消费者工厂
+    @KafkaListener(topics = KafkaProducer.TOPIC_TEST,groupId = KafkaProducer.TOPIC_GROUP,concurrency = "3",containerFactory = "kafkaListenerContainerFactory")
+
+```  
+### 默认分区策略 RangeAssignor
+RangeAssignor 分配策略
+RangeAssignor 按照范围（Range）的方式将分区分配给消费者。其分配规则如下：
+
+按主题排序：
+
+首先，RangeAssignor 会对每个主题的分区和消费者进行排序。分区根据编号排序，消费者根据消费者ID排序。
+按范围分配：
+
+每个消费者将会得到一个连续的分区范围。假设有 N 个消费者和 P 个分区，RangeAssignor 会尽量平均地将这些分区分配给每个消费者。
+例如，如果一个主题有10个分区（P0-P9），并且有3个消费者（C0, C1, C2），分区分配如下：
+C0: P0, P1, P2, P3
+C1: P4, P5, P6
+C2: P7, P8, P9  
+
+如果有11个分区，就是 4 4 3分配。  
 
 
+### 轮询分区策略 RoundRobinAssignor  
+RoundRobinAssignor 使用轮询（Round-Robin）方法分配分区。它确保分区在消费者之间均匀分配，无论分区编号或消费者编号如何。
 
+特点：
+所有分区会按顺序依次分配给消费者，尽量使每个消费者获得相同数量的分区。
+不保证分配的分区是连续的。
+示例：
+如果有 11 个分区和 3 个消费者，分配结果如下：
+
+C0: P0, P3, P6, P9
+C1: P1, P4, P7, P10
+C2: P2, P5, P8
+  
+### 粘性分区策略 StickyAssignor
+StickyAssignor 的目标是确保每个消费者在重新平衡时尽可能保持其分配的分区不变。它尝试实现分区的“粘性”分配，以减少重新平衡期间的分区移动。
+
+特点：
+尽量保持每个消费者的分区分配不变。
+重新平衡时，最小化分区的重新分配。
+示例：
+假设在一次重新平衡之前，消费者的分配如下：
+
+C0: P0, P1, P2
+C1: P3, P4, P5
+在重新平衡之后，尽量保持分配不变。如果新加入一个消费者 C2：
+
+C0: P0, P1
+C1: P3, P4
+C2: P2, P5
+
+### 合作粘性分区策略 CooperativeStickyAssignor
+CooperativeStickyAssignor 是 StickyAssignor 的改进版本，旨在减少重新平衡的时间和对系统的影响。它引入了“合作性重新平衡”的概念，使得消费者可以逐步进行重新平衡，而不是一次性重新分配所有分区。
+
+特点：
+逐步重新平衡，减少系统中断。
+保持分区分配的粘性，同时实现更平滑的重新平衡过程。
+示例：
+在逐步重新平衡期间，分区可能会部分移动：
+
+C0: P0, P1
+C1: P3, P4
+C2: P2, P5
+然后在下一轮逐步调整：
+C0: P0
+C1: P3
+C2: P1, P2, P4, P5
+
+### 粘性分区的首次分配
+首次分区分配的逻辑
+StickyAssignor
+StickyAssignor 在首次分区分配时，会尽量均衡地分配分区给消费者，同时保证尽量少的分区移动。首次分配时，StickyAssignor 会均匀地将分区分配给消费者，但是它不使用 RangeAssignor 的逻辑。
+
+CooperativeStickyAssignor
+CooperativeStickyAssignor 与 StickyAssignor 类似，也有自己的首次分配逻辑。它的目标是尽量减少分区的重新分配，在有新的消费者加入或现有消费者离开时，它会逐步重新分配分区，以减少对系统的影响。首次分配时，CooperativeStickyAssignor 也会均衡地分配分区，但不是使用 RangeAssignor 的逻辑。
+
+示例：StickyAssignor 和 CooperativeStickyAssignor 首次分配
+假设有 11 个分区和 3 个消费者，这两种分配策略首次分配时的行为如下：
+
+分区数：11
+消费者数：3
+StickyAssignor 首次分配
+StickyAssignor 会尽量均衡地分配分区，如下所示：
+
+C0: P0, P1, P2, P3
+C1: P4, P5, P6, P7
+C2: P8, P9, P10
+CooperativeStickyAssignor 首次分配
+CooperativeStickyAssignor 也会尽量均衡地分配分区，如下所示：
+
+C0: P0, P1, P2, P3
+C1: P4, P5, P6, P7
+C2: P8, P9, P10
+  
 ## 生产者发送消息流程
 
 **KafkaProducer -> 拦截器ProducerInterceptors -> 序列化器Serializer -> 分区器Partitioner**

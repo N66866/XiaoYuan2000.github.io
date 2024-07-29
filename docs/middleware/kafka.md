@@ -118,3 +118,77 @@ docker run --volume /opt/kafka/docker/:/mnt/shared/config -p 9092:9092 apache/ka
 	* 新建一个名为"Hello-Kafka"的主题： `bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic Hello-Kafka`
 ```
 
+### kafka事件数据的储存  
+
+#### 数据文件保存
+查看kafka的配置文件： server.properties 之 log.dirs
+kafka的所有事件都是以日志文件的方式来保存的。格式 topicId-partitionId 
+例如 : test-topic-0
+000000000000000000000000.index 消息索引文件
+000000000000000000000000.log 消息数据文件
+000000000000000000000000.timeindex 消息的时间戳索引文件
+000000000000000000000001.snapshot 快照文件，生产者发生故障或者重启时能够恢复并继续之前的操作
+leader-epoch-checkpoint 记录每个分区当前领导者的epoch以及领导者开始写入消息时的起始偏移量
+partition.metadata 存储关于特定分区的元数据信息
+
+#### `consumer_offsets  `
+
+1. 作用
+`__consumer_offsets `是一个特殊的内部主题，用于存储消费者组的偏移量信息。主要作用是记录每个消费者组中消费者的偏移量，确保消费者发生故障或重启时能够从上次提交的偏移量继续消费，避免数据丢失或重复消费。
+
+2. 结构和分区
+分区数：`__consumer_offsets` 主题默认有 50 个分区。这是为了支持高并发和大规模的消费者组。
+键和值：每条记录的键是一个由消费者组 ID、主题和分区组成的复合键；值是消费者的偏移量和元数据（如提交的时间戳）。
+3. 记录格式
+键（Key）：
+消费者组 ID：消费者组的唯一标识符。
+主题：消费者正在消费的主题。
+分区：消费者正在消费的主题分区。  
+
+值（Value）：
+偏移量：消费者在该分区上提交的最新偏移量。
+元数据：一些额外的信息，如提交的时间戳。
+
+4. 示例
+假设有一个消费者组 ID 为 group1，正在消费主题 topic1 的分区 partition0，当前偏移量为 100。在 `__consumer_offsets `主题中，可能存储的记录如下：
+  
+键：
+消费者组 ID：group1
+主题：topic1
+分区：partition0
+  
+值：
+偏移量：100
+元数据：如时间戳 1620000000000
+
+5. 读取和监控 `__consumer_offsets`
+可以使用 Kafka 提供的工具来查看和监控 `__consumer_offsets` 主题的数据。例如，可以使用 kafka-consumer-groups.sh 工具来查看消费者组的偏移量信息。
+```sh
+bin/kafka-consumer-groups.sh --bootstrap-server localhost:9092 --group group1 --describe
+
+# group topic       partition  current-offset          log-end-offset     lag 
+ group1 test-topic  0          10                          15              5
+ 消费组  主题        分区号     当前分区消费者offset   当前分区生产者offset   可读取消息数
+```
+这个命令将显示消费者组 group1 在各个分区上的偏移量、日志末尾偏移量以及滞后量。
+  
+6. 内部机制
+当消费者提交偏移量时，Kafka 会将该信息写入到 `__consumer_offsets` 主题中。提交过程如下：  
+消费者消费消息：消费者从主题的某个分区消费消息。
+提交偏移量：消费者定期提交消费到的偏移量到 `__consumer_offsets` 主题。
+写入日志：提交的偏移量作为一条记录写入 `__consumer_offsets` 主题的相应分区。
+从偏移量恢复：如果消费者发生故障或重新启动，它将从 `__consumer_offsets` 主题中读取最后一次提交的偏移量，继续消费。
+
+7. 数据保留
+`__consumer_offsets` 主题的数据保留策略通常设置为较长的时间，以确保可以在较长时间内恢复消费者的状态。可以通过以下参数配置：
+offsets.retention.minutes：指定偏移量保留的时间，默认是 7 天。
+offsets.retention.check.interval.ms：指定检查过期偏移量的间隔时间。
+配置示例
+在 Kafka 配置文件（server.properties）中，可以配置这些参数：
+```properties
+offsets.retention.minutes=10080  # 7 天
+offsets.retention.check.interval.ms=600000  # 10 分钟
+```  
+
+8. 总结
+`__consumer_offsets` 主题是 Kafka 用于管理消费者组偏移量的核心组件。它确保消费者能够从故障中恢复，并避免数据丢失或重复消费。通过理解其工作机制和配置选项，可以更好地管理和监控 Kafka 消费者组的行为。

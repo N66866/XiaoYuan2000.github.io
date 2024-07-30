@@ -38,7 +38,7 @@ docker exec -it kafka-container-id /bin/bash
 docker cp kafka-container-id:/etc/kafka/docker/server.properties /opt/kafka/docker/
 # 将配置编辑如下
 ```
-[!pic](/middleware/kafka-01.png)  
+![pic](/middleware/kafka-01.png)  
 修改完配置后，将配置挂载
 ```sh
 # docker run --volume（或简称 -v） 是 Docker 命令中用于挂载卷（volume）的选项。卷是 Docker 用来持久化和共享数据的一种机制，可以在容器之间共享数据，或者将数据持久化到主机文件系统中。使用卷可以确保即使容器被删除，数据也不会丢失。
@@ -120,7 +120,7 @@ docker run --volume /opt/kafka/docker/:/mnt/shared/config -p 9092:9092 apache/ka
 ```
 
 ## spring集成kafka
-请看本站的另一个spring栏目
+请看本站的另一个spring栏目：[看这里](spring-kafka.html#服务器安装)
 
 ## kafka 概念
 ### 副本Replica
@@ -137,6 +137,31 @@ docker run --volume /opt/kafka/docker/:/mnt/shared/config -p 9092:9092 apache/ka
 副本（Replica）：每个分区可以有多个副本，每个副本存储相同的数据。副本是Kafka高可用性的基础。  
 领导者副本（Leader Replica）：每个分区有一个领导者副本，负责处理所有的读写请求。  
 跟随者副本（Follower Replica）：其他副本称为跟随者副本，它们从领导者副本中复制数据，确保数据的一致性。  
+
+#### 1. ISR (In-Sync Replicas)
+ISR（In-Sync Replicas）指的是一个分区中与Leader保持同步的副本集合。ISR确保数据的一致性和可靠性。当一个分区的Leader接收到一条新的消息时，这条消息会被同步到ISR中的所有副本。只有在所有ISR副本都确认接收到这条消息后，消息才会被认为是已提交的。ISR集合中的副本都可以在Leader失效时被选举为新的Leader。  
+
+#### 2. LEO (Log End Offset)
+LEO（Log End Offset）是每个副本的一个重要属性，它表示这个副本日志中的下一条消息的Offset。换句话说，LEO是日志中当前最新消息的Offset + 1。LEO用于跟踪副本日志的末尾位置，并帮助判断副本之间的同步状态。  
+
+#### 3. HW (High Watermark)
+HW（High Watermark）是Leader副本的一个属性，它表示所有ISR副本都已确认的最新消息的Offset。消费者只能读取到HW之前的消息，这确保了消费者只看到已经完全同步并确认的消息。HW的存在确保了数据的一致性，即消费者不会读取到可能丢失或未同步完成的消息。  
+
+这些概念的关系
+Leader和Follower：每个分区有一个Leader和多个Follower。Leader处理所有的读写请求，Follower从Leader同步数据。  
+ISR集合：ISR集合包括Leader和所有与Leader保持同步的Follower。只有在ISR中的副本才能被选为新的Leader。  
+LEO：LEO表示副本日志的末尾位置。Leader和Follower都有自己的LEO。Leader的LEO通常是最新的，而Follower的LEO会落后一些，直到它们完成同步。  
+HW：HW由Leader管理，表示所有ISR副本都已确认的消息的Offset。消费者只能读取到HW之前的消息。  
+
+举例说明  
+假设有一个分区P，它有一个Leader L和两个Follower F1和F2。  
+
+初始状态下，L、F1和F2都是ISR的一部分，且它们的LEO相同，假设是10。  
+当Producer写入一条新消息M时，消息M的Offset是10，L的LEO更新为11。  
+L将消息M同步到F1和F2，F1和F2的LEO分别更新为11。  
+当L确认F1和F2都已同步消息M后，L更新HW为11。  
+消费者读取消息时，只能读取到Offset 11之前的消息。   
+
 #### 多副本架构  
 Kafka的多副本架构主要包括以下几个方面：  
   
@@ -267,3 +292,117 @@ log.dirs=/tmp/kafka-logs-01
 	* 启动： `bin/kafka-server-start.sh -daemon config/server.properties`
 	* 关闭： `bin/kafka-server-stop.sh -daemon config/server.properties`
 ```
+
+### Kraft  
+zookeeper 使用普通方式搭建，那KRaft就用docker吧。
+先将容器的配置文件复制一份，参考[这里](#docker外部机器连接不上)
+```sh
+drwxr-xr-x 2 root root   31 Jul 30 23:04 kafka01
+drwxr-xr-x 2 root root   31 Jul 30 23:05 kafka02
+drwxr-xr-x 2 root root   31 Jul 30 23:05 kafka03
+```  
+
+主要改配置如下
+```properties
+node.id=1
+process.roles=broker,controller
+listeners=PLAINTEXT://kafka-01:9092,CONTROLLER://kafka-01:9093
+controller.quorum.voters=1@kafka-01:9093,2@kafka-02:9093,3@kafka-03:9093
+log.dirs=/var/lib/kafka/data
+metadata.log.dir=/var/lib/kafka/meta
+
+node.id=2
+process.roles=broker,controller
+listeners=PLAINTEXT://kafka-02:9092,CONTROLLER://kafka-02:9093
+controller.quorum.voters=1@kafka-01:9093,2@kafka-02:9093,3@kafka-03:9093
+log.dirs=/var/lib/kafka/data
+metadata.log.dir=/var/lib/kafka/meta
+
+node.id=3
+process.roles=broker,controller
+listeners=PLAINTEXT://kafka-03:9092,CONTROLLER://kafka-03:9093
+controller.quorum.voters=1@kafka-01:9093,2@kafka-02:9093,3@kafka-03:9093
+log.dirs=/var/lib/kafka/data
+metadata.log.dir=/var/lib/kafka/meta
+```
+
+然后启动容器
+```sh
+# 创建网络
+docker network create kafka-network
+# 启动kafka 挂载配置文件
+docker run -d --name kafka-01 --hostname kafka-01 --network kafka-network -p 9092:9092 -p9093:9093 --volume /opt/kafka/docker/kafka01/:/mnt/shared/config apache/kafka:3.7.0
+docker run -d --name kafka-02 --hostname kafka-02 --network kafka-network -p 9094:9092 -p9095:9093 --volume /opt/kafka/docker/kafka02/:/mnt/shared/config apache/kafka:3.7.0
+docker run -d --name kafka-03 --hostname kafka-03 --network kafka-network -p 9096:9092 -p9097:9093 --volume /opt/kafka/docker/kafka03/:/mnt/shared/config apache/kafka:3.7.0
+# 然后查看网络
+docker network inspect kafka-network
+# 输出
+[
+    {
+        "Name": "kafka-network",
+        "Id": "f50de029ae30cb0d0603eb148663f3df92c6c0a03f1a911523ea94740fb9b33b",
+        "Created": "2024-07-30T22:31:46.343318515+08:00",
+        "Scope": "local",
+        "Driver": "bridge",
+        "EnableIPv6": false,
+        "IPAM": {
+            "Driver": "default",
+            "Options": {},
+            "Config": [
+                {
+                    "Subnet": "172.18.0.0/16",
+                    "Gateway": "172.18.0.1"
+                }
+            ]
+        },
+        "Internal": false,
+        "Attachable": false,
+        "Ingress": false,
+        "ConfigFrom": {
+            "Network": ""
+        },
+        "ConfigOnly": false,
+        "Containers": {
+            "6b77aad291275004b6dd17fe1c0e492996f3dd21751070faee25634c8be8d5e7": {
+                "Name": "kafka-01",
+                "EndpointID": "3982d469af589fd3eae769d55e7f2c72a09433dcd4ecfdcbf29acc7be7af5819",
+                "MacAddress": "02:42:ac:12:00:02",
+                "IPv4Address": "172.18.0.2/16",
+                "IPv6Address": ""
+            },
+            "86a729a8011075345e44d84e5276858ebeb7c45b855df74f649e6608e2a0ff29": {
+                "Name": "kafka-02",
+                "EndpointID": "d5bd650d88730f22f89bff513ab44a6d116e4fce4793e0800a1f8f5c45a5f1ef",
+                "MacAddress": "02:42:ac:12:00:03",
+                "IPv4Address": "172.18.0.3/16",
+                "IPv6Address": ""
+            },
+            "f894a3511b1756dff1fd05a883df8ca79fe53693ed9c1c8d908b7085ecf56d87": {
+                "Name": "kafka-03",
+                "EndpointID": "c3d2314b241696505632ca3d6a7bddf5dd08ecf978eea2c0406dba99cd525c3b",
+                "MacAddress": "02:42:ac:12:00:04",
+                "IPv4Address": "172.18.0.4/16",
+                "IPv6Address": ""
+            }
+        },
+        "Options": {},
+        "Labels": {}
+    }
+]
+```
+
+这种情况是正常启动，集群搭建完毕
+
+> 题外话： 我这三个容器启动后一分钟自动退出，使用 `docker logs kafka-01` 查看日志，发现报错找不到主机 kafka-02 kafka-03。
+开始排查： 
+
+1. 进入容器：docker exec -it --user root kafka-01 bash
+2. 查看网络：ping kafka-02 ，发现网络不通
+3. 利用上文的docker network inspect kafka-network 输出的Containers，查看其他容器的ip：kafka-02 172.18.0.3
+4. 查看网络：ping 172.18.0.3 发现网络畅通，得知是dns解析问题。不知道docker是怎么处理的。
+5. 自行写入hosts文件：
+		* docker exec -it --user root kafka-01 bash
+		* echo "172.18.0.2 kafka-01" >> /etc/hosts
+			echo "172.18.0.3 kafka-02" >> /etc/hosts
+			echo "172.18.0.4 kafka-03" >> /etc/hosts
+6. 再ping kafka-02，网络正常。后续排查docker的域名解析再更新

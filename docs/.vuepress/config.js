@@ -100,6 +100,7 @@ module.exports = {
                             {title:'shardingsphere读取配置问题',path:'/cannot-understand/shardingsphere'},
                             {title:'xface600产品掉线问题',path:'/cannot-understand/xface'},
                             {title:'cloudflare泛播问题',path:'/cannot-understand/cloudflare'},
+                            {title:'jwt token 解析问题',path:'/cannot-understand/jwt-token-decode'},
                         ]
                     }
                 ],

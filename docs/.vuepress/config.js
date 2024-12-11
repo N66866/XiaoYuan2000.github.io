@@ -127,6 +127,7 @@ module.exports = {
                         children: [
                             '/middleware/docker',
                             '/middleware/kafka',
+		{title:'Redis',path:'/middleware/redis'},
                         ]
                     }
                 ]

@@ -101,6 +101,7 @@ module.exports = {
                             {title:'xface600产品掉线问题',path:'/cannot-understand/xface'},
                             {title:'cloudflare泛播问题',path:'/cannot-understand/cloudflare'},
                             {title:'jwt token 解析问题',path:'/cannot-understand/jwt-token-decode'},
+                            {title:'t-io+java aio假死问题',path:'/cannot-understand/t-io_java_aio-dead'},
                         ]
                     }
                 ],

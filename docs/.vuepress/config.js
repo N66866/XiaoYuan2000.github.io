@@ -15,7 +15,8 @@ module.exports = {
                     {text: "git", link: "/git/"},
                     {text: "技术实践", link: "/practice/"},
                     {text: "奇难杂症", link: "/cannot-understand/"},
-                    {text: "中间件学习", link: "/middleware/"}
+                    {text: "中间件学习", link: "/middleware/"},
+                    {text: "AI Agent 学习", link: "/agent/"}
                 ]
             }, // 内部链接 以docs为根目录
             // 下拉列表
@@ -129,6 +130,45 @@ module.exports = {
                             '/middleware/docker',
                             '/middleware/kafka',
 		{title:'Redis',path:'/middleware/redis'},
+                        ]
+                    }
+                ],
+                '/agent/': [
+                    {
+                        title: 'Agent 扫盲篇',
+                        collapsable: true,
+                        children: [
+                            {title:'大模型基础扫盲',path:'/agent/llm-basics'},
+                            {title:'API 调用与 Prompt 工程',path:'/agent/api-and-prompt'},
+                            {title:'RAG 是什么',path:'/agent/rag-overview'},
+                        ]
+                    },
+                    {
+                        title: 'RAG 工程篇',
+                        collapsable: true,
+                        children: [
+                            {title:'RAG 知识库入库',path:'/agent/rag-ingestion'},
+                            {title:'Embedding 与向量数据库',path:'/agent/embedding-and-vector-db'},
+                            {title:'检索策略与召回优化',path:'/agent/retrieval-optimization'},
+                            {title:'大模型生成策略与幻觉抑制',path:'/agent/generation-and-hallucination'},
+                            {title:'RAG 评估与优化',path:'/agent/rag-evaluation'},
+                        ]
+                    },
+                    {
+                        title: 'Agent 能力篇',
+                        collapsable: true,
+                        children: [
+                            {title:'查询重写、意图路由与多轮记忆',path:'/agent/query-routing-and-memory'},
+                            {title:'Function Calling 与工具调用',path:'/agent/function-calling'},
+                            {title:'SSE 协议与流式响应',path:'/agent/sse-streaming'},
+                            {title:'MCP 协议入门',path:'/agent/mcp-basics'},
+                        ]
+                    },
+                    {
+                        title: 'Java Agent 开发篇',
+                        collapsable: true,
+                        children: [
+                            {title:'Java Agent 开发落地提示',path:'/agent/java-agent-dev-notes'},
                         ]
                     }
                 ]

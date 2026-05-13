@@ -160,8 +160,10 @@ module.exports = {
                         children: [
                             {title:'查询重写、意图路由与多轮记忆',path:'/agent/query-routing-and-memory'},
                             {title:'Function Calling 与工具调用',path:'/agent/function-calling'},
+                            {title:'工具调用架构与安全保障',path:'/agent/tool-calling-architecture'},
                             {title:'SSE 协议与流式响应',path:'/agent/sse-streaming'},
                             {title:'MCP 协议入门',path:'/agent/mcp-basics'},
+                            {title:'JSON-RPC 2.0 与 MCP 协议基础',path:'/agent/json-rpc-and-mcp-protocol'},
                         ]
                     },
                     {

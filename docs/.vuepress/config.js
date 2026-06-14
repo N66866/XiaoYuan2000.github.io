@@ -171,6 +171,11 @@ module.exports = {
                         collapsable: true,
                         children: [
                             {title:'Java Agent 开发落地提示',path:'/agent/java-agent-dev-notes'},
+                            {title:'RAG 知识库管理宏观设计',path:'/agent/java-agent-kb-management-design'},
+                            {title:'文件上传、内存与分布式限流',path:'/agent/java-agent-file-upload-and-rate-limit'},
+                            {title:'知识库文档上传与分块接口',path:'/agent/java-agent-document-upload-and-chunking'},
+                            {title:'知识库定时同步与故障恢复',path:'/agent/java-agent-scheduled-sync'},
+                            {title:'知识库文档与分块管理接口',path:'/agent/java-agent-kb-document-api'},
                         ]
                     }
                 ]

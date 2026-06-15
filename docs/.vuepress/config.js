@@ -16,6 +16,7 @@ module.exports = {
                     {text: "技术实践", link: "/practice/"},
                     {text: "奇难杂症", link: "/cannot-understand/"},
                     {text: "中间件学习", link: "/middleware/"},
+                    {text: "LLM 工程化", link: "/llm-engineering/"},
                     {text: "AI Agent 学习", link: "/agent/"}
                 ]
             }, // 内部链接 以docs为根目录
@@ -130,6 +131,55 @@ module.exports = {
                             '/middleware/docker',
                             '/middleware/kafka',
 		{title:'Redis',path:'/middleware/redis'},
+                        ]
+                    }
+                ],
+                '/llm-engineering/': [
+                    {
+                        title: 'LLM 工程化实战笔记',
+                        collapsable: false,
+                        children: [
+                            {title:'总览',path:'/llm-engineering/'},
+                        ]
+                    },
+                    {
+                        title: '基础认知',
+                        collapsable: true,
+                        children: [
+                            {title:'LLM 概述',path:'/llm-engineering/01-llm-overview'},
+                            {title:'Prompt Engineering',path:'/llm-engineering/02-prompt-engineering'},
+                        ]
+                    },
+                    {
+                        title: '工程核心能力',
+                        collapsable: true,
+                        children: [
+                            {title:'Spring AI、LangChain4j 与 Function Calling',path:'/llm-engineering/03-spring-ai-langchain4j-function-calling'},
+                            {title:'MCP 协议',path:'/llm-engineering/04-mcp'},
+                            {title:'RAG 检索增强生成',path:'/llm-engineering/05-rag'},
+                            {title:'Agent 智能体',path:'/llm-engineering/06-agent'},
+                            {title:'Workflow 工作流',path:'/llm-engineering/07-workflow'},
+                            {title:'Context Engineering',path:'/llm-engineering/08-context-engineering'},
+                            {title:'LLM 记忆',path:'/llm-engineering/09-llm-memory'},
+                        ]
+                    },
+                    {
+                        title: '框架、能力与模型优化',
+                        collapsable: true,
+                        children: [
+                            {title:'Harness 工程化评测',path:'/llm-engineering/10-harness'},
+                            {title:'Skills 能力封装',path:'/llm-engineering/11-skills'},
+                            {title:'AgentScope 多智能体框架',path:'/llm-engineering/12-agentscope'},
+                            {title:'微调 Fine-tuning',path:'/llm-engineering/13-fine-tuning'},
+                        ]
+                    },
+                    {
+                        title: 'Agent 实战',
+                        collapsable: true,
+                        children: [
+                            {title:'企业知识库问答 Agent',path:'/llm-engineering/14-agent-practice-knowledge-base'},
+                            {title:'MCP 工具箱 Agent',path:'/llm-engineering/15-agent-practice-mcp-toolbox'},
+                            {title:'多 Agent 工作流助手',path:'/llm-engineering/16-agent-practice-multi-agent-workflow'},
                         ]
                     }
                 ],

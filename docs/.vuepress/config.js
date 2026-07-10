@@ -154,8 +154,8 @@ module.exports = {
                         title: '工程核心能力',
                         collapsable: true,
                         children: [
-                            {title:'Spring AI、LangChain4j 与 Function Calling',path:'/llm-engineering/03-spring-ai-langchain4j-function-calling'},
-                            {title:'MCP 协议',path:'/llm-engineering/04-mcp'},
+                            {title:'Spring AI 与 LangChain4j',path:'/llm-engineering/03-spring-ai-langchain4j'},
+                            {title:'Function Calling 与 MCP',path:'/llm-engineering/04-function-calling-and-mcp'},
                             {title:'RAG 检索增强生成',path:'/llm-engineering/05-rag'},
                             {title:'Agent 智能体',path:'/llm-engineering/06-agent'},
                             {title:'Workflow 工作流',path:'/llm-engineering/07-workflow'},

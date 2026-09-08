@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
- "scripts": {
+  "scripts": {
     "dev": "vuepress dev docs",
-    "build": "vuepress build docs"
+    "build": "node --openssl-legacy-provider node_modules/vuepress/cli.js build docs"
   },
   "keywords": [],
   "author": "",

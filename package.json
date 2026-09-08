@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "vuepress dev docs",
-    "build": "node --openssl-legacy-provider node_modules/vuepress/cli.js build docs"
+    "build": "vuepress build docs",
+    "build:legacy-openssl": "node --openssl-legacy-provider node_modules/vuepress/cli.js build docs"
   },
   "keywords": [],
   "author": "",
